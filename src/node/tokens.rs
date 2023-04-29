@@ -13,7 +13,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::{Brace, Colon, PathSep},
-    Block, Error, ExprBlock, ExprLit, ExprPath, Ident, Path, PathSegment, Token,
+    Block, Error, ExprBlock, ExprLit, ExprPath, Ident, Path, PathSegment, Token, LitStr,
 };
 
 use super::{
@@ -22,7 +22,7 @@ use super::{
         CloseTag, FragmentClose, FragmentOpen, OpenTag,
     },
     attribute::KeyedAttribute,
-    Node, NodeBlock, NodeComment, NodeDoctype, NodeFragment, NodeName, NodeText,
+    Node, NodeBlock, NodeComment, NodeDoctype, NodeFragment, NodeName, NodeText, raw_text::RawText,
 };
 use crate::{
     config::{EmitError, TransformBlockFn},
@@ -282,8 +282,11 @@ impl Parse for Node {
             }
         } else if input.peek(Brace) {
             Node::Block(NodeBlock::parse(input)?)
-        } else {
+        } else if input.peek(LitStr) {
             Node::Text(NodeText::parse(input)?)
+        } else {
+            Node::RawText(RawText::parse(input)?)
+
         };
         Ok(node.into())
     }
