@@ -50,6 +50,12 @@ impl fmt::Display for NodeType {
 }
 
 /// Node in the tree.
+///
+/// Parsing behaviour is affected by [ParserConfig](crate::ParserConfig).
+///
+/// # Config
+/// In particular [RawText](crate::node::RawText) parsing behaviour is affected
+/// by [raw_text_elements](crate::ParserConfig::raw_text_elements).
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum Node {
     Comment(NodeComment),

@@ -97,7 +97,8 @@ impl ParserConfig {
     /// If you need fragment to be used in this context, empty string("") should
     /// be inserted.
     ///
-    /// Raw texts has few limitations, check out `RawText` documentation.
+    /// Raw texts has few limitations, check out [RawText](crate::node::RawText)
+    /// documentation.
     pub fn raw_text_elements(mut self, elements: HashSet<&'static str>) -> Self {
         self.raw_text_elements = elements;
         self

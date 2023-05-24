@@ -1,8 +1,8 @@
 //! Rust templating for XML-based formats (HTML, SVG, MathML) implemented on top
 //! of [`proc-macro::TokenStream`]s. Similar to JSX but for Rust (commonly named
-//! RSX). The parsed result is a nested [`Node`] structure, similar to the
-//! browser DOM, where node name and value are syn expressions to support
-//! building proc macros.
+//! RSX). The parsed result is a nested [Node](crate::node::Node) structure,
+//! similar to the browser DOM, where node name and value are syn expressions to
+//! support building proc macros.
 //!
 //! ```rust
 //! # fn main() -> eyre::Result<()> {

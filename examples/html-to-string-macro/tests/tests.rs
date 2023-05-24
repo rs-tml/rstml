@@ -22,7 +22,8 @@ fn test() {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>"Example"</title>
+                    <title>raw text, first child node " Text : second child node "<third-element-child/> raw text, fourth child node {world}</title>
+                    <script>one single " Monolithic "<included-in-raw-text/> {world} raw child</script>
                 </head>
                 <body>
                     <!-- "comment" -->
@@ -41,7 +42,8 @@ fn test() {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>Example</title>
+                    <title>raw text, first child node Text : second child node <third-element-child/>raw text, fourth child nodeplanet</title>
+                    <script>one single " Monolithic " < included - in - raw - text / > {{ world }} raw child</script>
                 </head>
                 <body>
                     <!-- comment -->
