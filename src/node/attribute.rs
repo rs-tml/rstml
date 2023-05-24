@@ -36,23 +36,23 @@ impl KeyedAttribute {
     /// literal.
     ///
     /// Example of displayable literals:
-    /// `"string"`      // string
-    /// `'c'`           // char
-    /// `0x12`, `1231`  // integer - converted to decimal form
-    /// `0.12`          // float point value - converted to decimal form
-    /// `true`, `false` // booleans
+    /// - `"string"`      // string
+    /// - `'c'`           // char
+    /// - `0x12`, `1231`  // integer - converted to decimal form
+    /// - `0.12`          // float point value - converted to decimal form
+    /// - `true`, `false` // booleans
     ///
     /// Examples of literals that also will be non-displayable:
-    /// `b'a'`     // byte
-    /// `b"asdad"` // byte-string
+    /// - `b'a'`     // byte
+    /// - `b"asdad"` // byte-string
     ///
     /// Examples of non-static non-displayable expressions:
-    /// `{ x + 1}`     // block of code
-    /// `y`            // usage of variable
-    /// `|v| v + 1`    // closure is valid expression too
-    /// `[1, 2, 3]`    // arrays,
-    /// `for/while/if` // any controll flow
-    /// .. and this list can be extended
+    /// - `{ x + 1}`     // block of code
+    /// - `y`            // usage of variable
+    /// - `|v| v + 1`    // closure is valid expression too
+    /// - `[1, 2, 3]`    // arrays,
+    /// - `for/while/if` // any controll flow
+    /// - .. and this list can be extended
     ///
     /// Adapted from leptos
     pub fn value_literal_string(&self) -> Option<String> {

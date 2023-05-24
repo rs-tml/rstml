@@ -355,7 +355,7 @@ impl RecoverableContext {
                 parser.push_diagnostic(Diagnostic::spanned(
                     eaten_tokens.span(),
                     Level::Error,
-                    "tokens was ignored during parsing",
+                    "tokens were ignored during parsing",
                 ))
             }
             collection
