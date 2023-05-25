@@ -7,8 +7,9 @@ pub mod docs {
     /// Element has open and close tags, content and attributes.
     pub fn element() {}
 }
+
 #[test]
-fn test() {
+fn test_basic() {
     let nightly_unqoted = " Hello  world with spaces ";
     let stable_unqoted = "Hello world with spaces";
     let unquoted_text = if cfg!(feature = "nightly") {
@@ -22,8 +23,7 @@ fn test() {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>raw text, first child node " Text : second child node "<third-element-child/> raw text, fourth child node {world}</title>
-                    <script>one single " Monolithic "<included-in-raw-text/> {world} raw child</script>
+                    <title>"Example"</title>
                 </head>
                 <body>
                     <!-- "comment" -->
@@ -42,8 +42,7 @@ fn test() {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>raw text, first child node Text : second child node <third-element-child/>raw text, fourth child nodeplanet</title>
-                    <script>one single " Monolithic " < included - in - raw - text / > {{ world }} raw child</script>
+                    <title>Example</title>
                 </head>
                 <body>
                     <!-- comment -->
@@ -57,6 +56,29 @@ fn test() {
         "#,
             unquoted_text
         )
+        .split('\n')
+        .map(|line| line.trim())
+        .collect::<Vec<&str>>()
+        .join("")
+    );
+}
+
+#[test]
+fn test_raw_text_involved() {
+    let world = "planet";
+    assert_eq!(
+        html! {
+                <head>
+                    <title>raw text, first child node " Text : second child node "<third-element-child/> raw text, fourth child node {world}</title>
+                    <script>one single " Monolithic "<included-in-raw-text/> {world} raw child</script>
+                </head>
+        },
+            r#"
+                <head>
+                    <title>raw text, first child node Text : second child node <third-element-child/>raw text, fourth child nodeplanet</title>
+                    <script>one single " Monolithic " < included - in - raw - text / > { world } raw child</script>
+                </head>
+        "#
         .split('\n')
         .map(|line| line.trim())
         .collect::<Vec<&str>>()
