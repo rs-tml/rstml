@@ -42,7 +42,7 @@ use super::Node;
 ///        <head>
 ///            <title>raw text, first child node " Text : second child node
 /// "<third-element-child/> raw text, fourth child node {world}</title>
-///            <script>one single " Monolithic "<included-in-raw-text/> {world}
+///            <script>one single " Monolithic "<included/> {world}
 /// raw child</script>        
 ///        </head>
 ///    };
@@ -50,7 +50,7 @@ use super::Node;
 ///        <head>
 ///            <title>raw text, first child node Text : second child node
 /// <third-element-child/>raw text, fourth child nodeplanet</title>            
-/// <script>one single " Monolithic " < included - in - raw - text / > { world }
+/// <script>one single " Monolithic " < included / > { world }
 /// raw child</script>
 ///        </head>
 ///        "#;
@@ -65,9 +65,79 @@ use super::Node;
 ///
 /// In the case of `script`, the content between opening `script` and closing
 /// `script` is parsed as a single [RawText](crate::node::RawText) node.
+///
+///    ```bash
+///    NodeElement
+///    ├── OpenTag
+///    │   ├── <
+///    │   ├── NodeName: Path, syn::expr::ExprPath
+///    │   │   └── head
+///    │   └── OpenTagEnd
+///    │       ├── token_solidus: None
+///    │       └── >
+///    ├── vec: children
+///    │   ├── NodeElement
+///    │   │   ├── OpenTag
+///    │   │   │   ├── <
+///    │   │   │   ├── NodeName: Path, syn::expr::ExprPath
+///    │   │   │   │   └── title
+///    │   │   │   └── OpenTagEnd
+///    │   │   │       ├── token_solidus: None
+///    │   │   │       └── >
+///    │   │   ├── vec: children
+///    │   │   │   ├── RawText, proc_macro2::TokenStream
+///    │   │   │   │   └── raw text , first child node
+///    │   │   │   ├── NodeText, syn::lit::LitStr
+///    │   │   │   │   └── " Text : second child node "
+///    │   │   │   ├── NodeElement
+///    │   │   │   │   ├── OpenTag
+///    │   │   │   │   │   ├── <
+///    │   │   │   │   │   ├── NodeName: Punctuated, ...
+///    │   │   │   │   │   │   └── third - element - child
+///    │   │   │   │   │   └── OpenTagEnd
+///    │   │   │   │   │       ├── /
+///    │   │   │   │   │       └── >
+///    │   │   │   │   └── CloseTag: None
+///    │   │   │   ├── RawText, proc_macro2::TokenStream
+///    │   │   │   │   └── raw text , fourth child node
+///    │   │   │   └── NodeBlock: ValidBlock, syn::stmt::Block
+///    │   │   │       └── { world }
+///    │   │   └── CloseTag: Some
+///    │   │       ├── CloseTagStart
+///    │   │       │   ├── <
+///    │   │       │   └── /
+///    │   │       ├── NodeName: Path, syn::expr::ExprPath
+///    │   │       │   └── title
+///    │   │       └── >
+///    │   └── NodeElement
+///    │       ├── OpenTag
+///    │       │   ├── <
+///    │       │   ├── NodeName: Path, syn::expr::ExprPath
+///    │       │   │   └── script
+///    │       │   └── OpenTagEnd
+///    │       │       ├── token_solidus: None
+///    │       │       └── >
+///    │       ├── vec: children
+///    │       │   └── RawText, proc_macro2::TokenStream
+///    │       │       └── one single " Monolithic " < included / > ...
+///    │       └── CloseTag: Some
+///    │           ├── CloseTagStart
+///    │           │   ├── <
+///    │           │   └── /
+///    │           ├── NodeName: Path, syn::expr::ExprPath
+///    │           │   └── script
+///    │           └── >
+///    └── CloseTag: Some
+///        ├── CloseTagStart
+///        │   ├── <
+///        │   └── /
+///        ├── NodeName: Path, syn::expr::ExprPath
+///        │   └── head
+///        └── >
+///    ```
 #[derive(Clone, Debug, Default)]
 pub struct RawText {
-    token_stream: TokenStream,
+    pub(crate) token_stream: TokenStream,
     // Span that started before previous token, and after next.
     context_span: Option<(Span, Span)>,
 }

@@ -8,6 +8,7 @@ use syn::{ExprPath, LitStr, Token};
 
 pub mod atoms;
 mod attribute;
+pub mod component_tree;
 mod node_name;
 mod node_value;
 pub mod parse;

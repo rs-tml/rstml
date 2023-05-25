@@ -17,6 +17,7 @@ proc-macro2 = "1.0.47"
 quote = "1.0.21"
 syn = "2.0.15"
 rstml = { path = "../../" }
+termtree = "0.4.1"
 
 [dev-dependencies]
 trybuild = "1.0"
