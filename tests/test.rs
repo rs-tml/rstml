@@ -2,9 +2,9 @@ use std::{convert::TryFrom, str::FromStr};
 
 use eyre::Result;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use rstml::{
-    node::{KeyedAttribute, Node, NodeAttribute, NodeElement, NodeType},
+    node::{KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement, NodeType},
     parse2, Parser, ParserConfig,
 };
 use syn::Block;
@@ -300,6 +300,83 @@ fn test_coloned_attribute_name() -> Result<()> {
     let attribute = get_element_attribute(&nodes, 0, 0);
 
     assert_eq!(attribute.key.to_string(), "on:click");
+
+    Ok(())
+}
+
+#[test]
+fn test_fn_bind_in_attribute() -> Result<()> {
+    let tokens = quote! {
+        <div bind:var(x)/>
+    };
+
+    let nodes = parse2(tokens)?;
+    let attribute = get_element_attribute(&nodes, 0, 0);
+
+    assert_eq!(attribute.key.to_string(), "bind:var");
+
+    let binding = match &attribute.possible_value {
+        KeyedAttributeValue::Binding(b) => b,
+        _ => unreachable!(),
+    };
+    assert_eq!(binding.inputs.len(), 1);
+    match binding.inputs.first().unwrap() {
+        syn::Pat::Ident(x) => assert_eq!(x.ident.to_string(), "x"),
+        _ => unreachable!(),
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_fn_bind_with_type() -> Result<()> {
+    let tokens = quote! {
+        <div bind:var(x:Y)/>
+    };
+
+    let nodes = parse2(tokens)?;
+    let attribute = get_element_attribute(&nodes, 0, 0);
+
+    assert_eq!(attribute.key.to_string(), "bind:var");
+
+    let binding = match &attribute.possible_value {
+        KeyedAttributeValue::Binding(b) => b,
+        _ => unreachable!(),
+    };
+    assert_eq!(binding.inputs.len(), 1);
+    match binding.inputs.first().unwrap() {
+        syn::Pat::Type(x) => {
+            assert!(matches!(&*x.pat, syn::Pat::Ident(x) if x.ident.to_string() == "x"));
+            match &*x.ty {
+                syn::Type::Path(p) => {
+                    assert_eq!(p.path.segments.first().unwrap().ident.to_string(), "Y")
+                }
+                _ => unreachable!(),
+            }
+        }
+        _ => unreachable!(),
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_fn_bind_mixed_types() -> Result<()> {
+    let tokens = quote! {
+        <div bind:var(x:Y, z)/>
+    };
+
+    let nodes = parse2(tokens)?;
+    let attribute = get_element_attribute(&nodes, 0, 0);
+
+    assert_eq!(attribute.key.to_string(), "bind:var");
+
+    let binding = match &attribute.possible_value {
+        KeyedAttributeValue::Binding(b) => b,
+        _ => unreachable!(),
+    };
+
+    assert_eq!(binding.to_token_stream().to_string(), "(x : Y , z)");
 
     Ok(())
 }

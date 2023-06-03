@@ -13,7 +13,9 @@ mod node_value;
 pub mod parse;
 mod raw_text;
 
-pub use attribute::{KeyedAttribute, NodeAttribute};
+pub use attribute::{
+    AttributeValueExpr, FnBinding, KeyedAttribute, KeyedAttributeValue, NodeAttribute,
+};
 pub use node_name::NodeName;
 pub use node_value::NodeBlock;
 
