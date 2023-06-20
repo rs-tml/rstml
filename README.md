@@ -167,5 +167,5 @@ You might want to check out the [html-to-string-macro example] as well.
 [`Span::join`]: https://doc.rust-lang.org/proc_macro/struct.Span.html#method.join
 [`Span::source_text`]: https://doc.rust-lang.org/proc_macro/struct.Span.html#method.source_text
 [`tokenstream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
-[html-to-string-macro example]: https://github.com/stoically/syn-rsx/tree/main/examples/html-to-string-macro
+[html-to-string-macro example]: https://github.com/rs-tml/rstml/tree/main/examples/html-to-string-macro
 [#9]: https://github.com/stoically/syn-rsx/issues/9
