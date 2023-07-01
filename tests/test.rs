@@ -7,7 +7,7 @@ use rstml::{
     node::{KeyedAttribute, Node, NodeAttribute, NodeElement, NodeType},
     parse2, Parser, ParserConfig,
 };
-use syn::Block;
+use syn::{parse_quote, Block, LifetimeParam, TypeParam};
 
 #[test]
 fn test_single_empty_element() -> Result<()> {
@@ -490,6 +490,79 @@ fn test_fragment() -> Result<()> {
 
     assert_eq!(fragment.children.len(), 1);
 
+    Ok(())
+}
+
+#[test]
+fn test_generics() -> Result<()> {
+    let tokens = quote! {
+        <foo<Bar>/>
+    };
+    let nodes = parse2(tokens)?;
+    let element = get_element(&nodes, 0);
+
+    assert_eq!(element.name().to_string(), "foo");
+    let param: TypeParam = parse_quote!(Bar);
+    assert_eq!(element.open_tag.generics.type_params().next(), Some(&param));
+
+    Ok(())
+}
+#[test]
+fn test_generics_lifetime() -> Result<()> {
+    let tokens = quote! {
+        <foo<'bar: 'a + 'b>/>
+    };
+    let nodes = parse2(tokens)?;
+    let element = get_element(&nodes, 0);
+
+    assert_eq!(element.name().to_string(), "foo");
+    let param: LifetimeParam = parse_quote!('bar: 'a + 'b);
+    assert_eq!(element.open_tag.generics.lifetimes().next(), Some(&param));
+
+    Ok(())
+}
+#[test]
+fn test_generics_closed() -> Result<()> {
+    let tokens = quote! {
+        <foo<'a, Bar>> </foo<'a, Bar>>
+    };
+    let nodes = parse2(tokens)?;
+    let element = get_element(&nodes, 0);
+
+    assert_eq!(element.name().to_string(), "foo");
+    let param: TypeParam = parse_quote!(Bar);
+    let lf_param: LifetimeParam = parse_quote!('a);
+    assert_eq!(
+        element
+            .close_tag
+            .as_ref()
+            .unwrap()
+            .generics
+            .type_params()
+            .next(),
+        Some(&param)
+    );
+    assert_eq!(
+        element
+            .close_tag
+            .as_ref()
+            .unwrap()
+            .generics
+            .lifetimes()
+            .next(),
+        Some(&lf_param)
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_generics_closed_not_match() -> Result<()> {
+    let tokens = quote! {
+        <foo<Bar>> </foo<Baz>>
+    };
+    let e = parse2(tokens).unwrap_err();
+    assert_eq!(e.to_string(), "close tag generics missmatch");
     Ok(())
 }
 
