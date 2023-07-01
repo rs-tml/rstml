@@ -132,6 +132,7 @@ impl ParseRecoverable for OpenTag {
             ));
         }
         let name = parser.parse_simple(input)?;
+        let generics = parser.parse_simple(input)?;
 
         let (attributes, end_tag) = parser
             .parse_tokens_with_ending::<NodeAttribute, _, _>(input, tokens::OpenTagEnd::parse);
@@ -142,6 +143,7 @@ impl ParseRecoverable for OpenTag {
         end_tag.map(|end_tag| OpenTag {
             token_lt,
             name,
+            generics,
             attributes,
             end_tag,
         })
@@ -216,6 +218,19 @@ impl ParseRecoverable for NodeElement {
                         "open tag that should be closed; it's started here",
                     );
 
+            parser.push_diagnostic(diagnostic)
+        }
+        if close_tag.generics != open_tag.generics {
+            let diagnostic = Diagnostic::spanned(
+                close_tag.span(),
+                Level::Error,
+                "close tag generics missmatch",
+            )
+            .spanned_child(
+                open_tag.span(),
+                Level::Help,
+                "open tag generics should match close tag generics",
+            );
             parser.push_diagnostic(diagnostic)
         }
         let element = NodeElement {

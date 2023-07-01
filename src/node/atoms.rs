@@ -123,7 +123,7 @@ impl FragmentClose {
         };
         Some(Self {
             start_tag,
-            token_gt: parser.save_diagnostics(input.parse())?,
+            token_gt: parser.parse_simple(input)?,
         })
     }
 }
@@ -134,6 +134,7 @@ impl FragmentClose {
 pub struct OpenTag {
     pub token_lt: Token![<],
     pub name: NodeName,
+    pub generics: syn::Generics,
     #[to_tokens(parse::to_tokens_array)]
     pub attributes: Vec<NodeAttribute>,
     pub end_tag: tokens::OpenTagEnd,
@@ -150,6 +151,7 @@ impl OpenTag {
 pub struct CloseTag {
     pub start_tag: tokens::CloseTagStart,
     pub name: NodeName,
+    pub generics: syn::Generics,
     pub token_gt: Token![>],
 }
 
@@ -161,8 +163,9 @@ impl CloseTag {
     ) -> Option<Self> {
         Some(Self {
             start_tag: start_tag?,
-            name: parser.save_diagnostics(input.parse())?,
-            token_gt: parser.save_diagnostics(input.parse())?,
+            name: parser.parse_simple(input)?,
+            generics: parser.parse_simple(input)?,
+            token_gt: parser.parse_simple(input)?,
         })
     }
 }
