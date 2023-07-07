@@ -61,6 +61,8 @@ pub struct RecoveryConfig {
     /// html, and should be provided as is.
     pub(crate) raw_text_elements: HashSet<&'static str>,
     pub(crate) transform_block: Option<Rc<TransformBlockFn>>,
+    /// Allows wildcard closing tag matching for blocks
+    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&syn::Block) -> bool>>,
 }
 
 impl Debug for RecoveryConfig {
@@ -217,6 +219,7 @@ impl From<crate::ParserConfig> for RecoveryConfig {
             raw_text_elements: config.raw_text_elements.clone(),
             always_self_closed_elements: config.always_self_closed_elements.clone(),
             transform_block: config.transform_block.clone(),
+            block_element_close_wildcard: config.block_element_close_wildcard.clone(),
         }
     }
 }

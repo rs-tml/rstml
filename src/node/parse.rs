@@ -18,7 +18,7 @@ use super::{
         CloseTag, FragmentClose, FragmentOpen, OpenTag,
     },
     raw_text::RawText,
-    Node, NodeBlock, NodeDoctype, NodeFragment,
+    Node, NodeBlock, NodeDoctype, NodeFragment, NodeName,
 };
 use crate::{
     atoms::CloseTagStart,
@@ -208,15 +208,43 @@ impl ParseRecoverable for NodeElement {
         };
 
         if close_tag.name != open_tag.name {
-            let diagnostic =
-                Diagnostic::spanned(close_tag.span(), Level::Error, "wrong close tag found")
+            match (
+                &open_tag.name,
+                &close_tag.name,
+                parser.config().block_element_close_wildcard.as_deref(),
+            ) {
+                (NodeName::Block(_), NodeName::Block(close_block), Some(is_wildcard))
+                    if is_wildcard(close_block) => {}
+                (_, NodeName::Block(close_block), Some(is_wildcard))
+                    if is_wildcard(close_block) =>
+                {
+                    let diagnostic = Diagnostic::spanned(
+                        close_tag.span(),
+                        Level::Error,
+                        "wildcard close tag can only be used with block open tag",
+                    )
+                    .spanned_child(
+                        open_tag.span(),
+                        Level::Help,
+                        "open tag that should be closed; it's started here",
+                    );
+                    parser.push_diagnostic(diagnostic)
+                }
+                _ => {
+                    let diagnostic = Diagnostic::spanned(
+                        close_tag.span(),
+                        Level::Error,
+                        "wrong close tag found",
+                    )
                     .spanned_child(
                         open_tag.span(),
                         Level::Help,
                         "open tag that should be closed; it's started here",
                     );
 
-            parser.push_diagnostic(diagnostic)
+                    parser.push_diagnostic(diagnostic)
+                }
+            }
         }
         let element = NodeElement {
             open_tag,

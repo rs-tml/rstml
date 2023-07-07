@@ -17,6 +17,7 @@ pub struct ParserConfig {
     pub(crate) recover_block: bool,
     pub(crate) always_self_closed_elements: HashSet<&'static str>,
     pub(crate) raw_text_elements: HashSet<&'static str>,
+    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&syn::Block) -> bool>>,
 }
 
 impl Debug for ParserConfig {
@@ -139,6 +140,44 @@ impl ParserConfig {
         F: Fn(ParseStream) -> Result<Option<TokenStream>> + 'static,
     {
         self.transform_block = Some(Rc::new(callback));
+        self
+    }
+
+    /// Allows unmatched tag pairs where the element opens with a block and
+    /// the close tag matches a specified wildcard. For example
+    ///
+    /// ```rust
+    /// use quote::quote;
+    /// use rstml::{parse2_with_config, ParserConfig};
+    /// use syn::{Expr, ExprRange, RangeLimits, Stmt};
+    ///
+    /// let tokens = quote! {
+    ///     <{"OpenTag"}>{"Content"}</{..}>
+    /// };
+    ///
+    /// let config = ParserConfig::new().block_element_close_wildcard(|block| {
+    ///     // Allow </{..}> as wildcard closing tag
+    ///     matches!(
+    ///         &block.stmts[..],
+    ///         &[Stmt::Expr(
+    ///             Expr::Range(ExprRange {
+    ///                 start: None,
+    ///                 limits: RangeLimits::HalfOpen(_),
+    ///                 end: None,
+    ///                 ..
+    ///             }),
+    ///             None
+    ///         )]
+    ///     )
+    /// });
+    ///
+    /// parse2_with_config(tokens, config).unwrap();
+    /// ```
+    pub fn block_element_close_wildcard<F>(mut self, predicate: F) -> Self
+    where
+        F: Fn(&syn::Block) -> bool + 'static,
+    {
+        self.block_element_close_wildcard = Some(Rc::new(predicate));
         self
     }
 }
