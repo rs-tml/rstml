@@ -152,10 +152,8 @@ impl ParserConfig {
     /// use syn::{Expr, ExprRange, RangeLimits, Stmt};
     ///
     /// let config = ParserConfig::new().block_element_close_wildcard(|close_tag| {
-    ///     // Construct a sampleof what a wildcard block element close should be
-    ///     let sample_close = quote! {
-    ///         <{}></_>
-    ///     };
+    ///     // Construct a sample of what a wildcard block element close should be
+    ///     let sample_close = quote! { <{}></_> };
     ///     let parsed = Parser::new(ParserConfig::new().block_element_close_wildcard(|_| true))
     ///         .parse_simple(sample_close);
     ///     let Ok([Node::Element(NodeElement {
