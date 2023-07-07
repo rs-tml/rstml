@@ -43,7 +43,7 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::parse::{Parse, ParseStream};
 
-use crate::{config::TransformBlockFn, ParserConfig};
+use crate::{atoms::CloseTag, config::TransformBlockFn, ParserConfig};
 
 /// Config of parser.
 /// Used to extend parsing functionality by user needs.
@@ -62,7 +62,7 @@ pub struct RecoveryConfig {
     pub(crate) raw_text_elements: HashSet<&'static str>,
     pub(crate) transform_block: Option<Rc<TransformBlockFn>>,
     /// Allows wildcard closing tag matching for blocks
-    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&syn::Block) -> bool>>,
+    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&CloseTag) -> bool>>,
 }
 
 impl Debug for RecoveryConfig {

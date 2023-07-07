@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 use proc_macro2::TokenStream;
 use syn::{parse::ParseStream, Result};
 
-use crate::node::NodeType;
+use crate::{atoms::CloseTag, node::NodeType};
 
 pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
 
@@ -17,7 +17,7 @@ pub struct ParserConfig {
     pub(crate) recover_block: bool,
     pub(crate) always_self_closed_elements: HashSet<&'static str>,
     pub(crate) raw_text_elements: HashSet<&'static str>,
-    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&syn::Block) -> bool>>,
+    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&CloseTag) -> bool>>,
 }
 
 impl Debug for ParserConfig {
@@ -148,34 +148,34 @@ impl ParserConfig {
     ///
     /// ```rust
     /// use quote::quote;
-    /// use rstml::{parse2_with_config, ParserConfig};
+    /// use rstml::{Parser, ParserConfig, node::{Node, NodeElement}};
     /// use syn::{Expr, ExprRange, RangeLimits, Stmt};
     ///
-    /// let tokens = quote! {
-    ///     <{"OpenTag"}>{"Content"}</{..}>
-    /// };
-    ///
-    /// let config = ParserConfig::new().block_element_close_wildcard(|block| {
-    ///     // Allow </{..}> as wildcard closing tag
-    ///     matches!(
-    ///         &block.stmts[..],
-    ///         &[Stmt::Expr(
-    ///             Expr::Range(ExprRange {
-    ///                 start: None,
-    ///                 limits: RangeLimits::HalfOpen(_),
-    ///                 end: None,
-    ///                 ..
-    ///             }),
-    ///             None
-    ///         )]
-    ///     )
+    /// let config = ParserConfig::new().block_element_close_wildcard(|close_tag| {
+    ///     // Construct a sampleof what a wildcard block element close should be
+    ///     let sample_close = quote! {
+    ///         <{}></_>
+    ///     };
+    ///     let parsed = Parser::new(ParserConfig::new().block_element_close_wildcard(|_| true))
+    ///         .parse_simple(sample_close);
+    ///     let Ok([Node::Element(NodeElement {
+    ///         close_tag: Some(sample_close),
+    ///         ..
+    ///     })]) = parsed.as_deref() else {
+    ///         unreachable!();
+    ///     };
+    ///     close_tag.name == sample_close.name
     /// });
     ///
-    /// parse2_with_config(tokens, config).unwrap();
+    /// let tokens = quote! {
+    ///     <{"OpenTag"}>{"Content"}</_>
+    /// };
+    ///
+    /// Parser::new(config).parse_simple(tokens).unwrap();
     /// ```
     pub fn block_element_close_wildcard<F>(mut self, predicate: F) -> Self
     where
-        F: Fn(&syn::Block) -> bool + 'static,
+        F: Fn(&CloseTag) -> bool + 'static,
     {
         self.block_element_close_wildcard = Some(Rc::new(predicate));
         self
