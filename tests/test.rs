@@ -44,7 +44,9 @@ fn test_single_element_with_text() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Node::Text(child) = get_element_child(&nodes, 0, 0) else { panic!("expected child") };
+    let Node::Text(child) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected child")
+    };
 
     assert_eq!(child.value.value(), "bar");
 
@@ -59,7 +61,9 @@ fn test_single_element_with_unquoted_text_simple() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Node::RawText(child) = get_element_child(&nodes, 0, 0) else { panic!("expected child") };
+    let Node::RawText(child) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected child")
+    };
 
     // We can't use source text if token stream was created with quote!.
     assert_eq!(child.to_token_stream_string(), "bar baz");
@@ -77,7 +81,9 @@ fn test_single_element_with_unquoted_text_advance() -> Result<()> {
     .unwrap();
 
     let nodes = parse2(tokens)?;
-    let Node::RawText(child) = get_element_child(&nodes, 0, 0) else { panic!("expected child") };
+    let Node::RawText(child) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected child")
+    };
 
     // source text should be available
     assert_eq!(child.to_source_text(true).unwrap(), " bar  baz ");
@@ -192,7 +198,9 @@ fn test_reserved_keyword_attributes() -> Result<()> {
     };
     let nodes = parse2(tokens)?;
     let element = get_element(&nodes, 0);
-    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().get(0) else { panic!("expected attribute") };
+    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().get(0) else {
+        panic!("expected attribute")
+    };
 
     assert_eq!(element.name().to_string(), "input");
     assert_eq!(attribute.key.to_string(), "type");
@@ -389,7 +397,9 @@ fn test_transform_block_some() -> Result<()> {
     });
 
     let nodes = Parser::new(config).parse_simple(tokens)?;
-    let Node::Block(block) = get_element_child(&nodes, 0, 0) else { panic!("expected block") };
+    let Node::Block(block) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected block")
+    };
 
     assert_eq!(
         match block.try_block().as_ref() {
@@ -433,7 +443,9 @@ fn test_doctype() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else { panic!("expected doctype") };
+    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+        panic!("expected doctype")
+    };
 
     assert_eq!(doctype.value.to_token_stream_string(), "html");
 
@@ -449,7 +461,9 @@ fn test_doctype_empty() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else { panic!("expected doctype") };
+    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+        panic!("expected doctype")
+    };
 
     assert_eq!(doctype.value.to_token_stream_string(), "");
 
@@ -467,9 +481,12 @@ fn test_comment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Comment(comment1)) = nodes.get(0) else { panic!("expected comment") };
-    let Node::Comment(comment2) =
-        get_element_child(&nodes, 1, 0) else { panic!("expected comment") };
+    let Some(Node::Comment(comment1)) = nodes.get(0) else {
+        panic!("expected comment")
+    };
+    let Node::Comment(comment2) = get_element_child(&nodes, 1, 0) else {
+        panic!("expected comment")
+    };
 
     assert_eq!(comment1.value.value(), "comment1");
     assert_eq!(comment2.value.value(), "comment2");
@@ -486,7 +503,9 @@ fn test_fragment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Fragment(fragment)) = nodes.get(0) else { panic!("expected fragment") };
+    let Some(Node::Fragment(fragment)) = nodes.get(0) else {
+        panic!("expected fragment")
+    };
 
     assert_eq!(fragment.children.len(), 1);
 
@@ -621,7 +640,9 @@ fn test_single_element_with_different_attributes() -> Result<()> {
 }
 
 fn get_element(nodes: &[Node], element_index: usize) -> &NodeElement {
-    let Some(Node::Element(element)) = nodes.get(element_index) else { panic!("expected element") };
+    let Some(Node::Element(element)) = nodes.get(element_index) else {
+        panic!("expected element")
+    };
     element
 }
 
@@ -630,15 +651,20 @@ fn get_element_attribute(
     element_index: usize,
     attribute_index: usize,
 ) -> &KeyedAttribute {
-    let Some(Node::Element(element)) =
-        nodes.get(element_index) else { panic!("expected element") };
-    let Some(NodeAttribute::Attribute(attribute)) =
-        element.attributes().get(attribute_index) else { panic!("expected attribute") };
+    let Some(Node::Element(element)) = nodes.get(element_index) else {
+        panic!("expected element")
+    };
+    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().get(attribute_index)
+    else {
+        panic!("expected attribute")
+    };
 
     attribute
 }
 
 fn get_element_child(nodes: &[Node], element_index: usize, child_index: usize) -> &Node {
-    let Some(Node::Element(element)) = nodes.get(element_index) else { panic!("expected element") };
+    let Some(Node::Element(element)) = nodes.get(element_index) else {
+        panic!("expected element")
+    };
     element.children.get(child_index).expect("child")
 }

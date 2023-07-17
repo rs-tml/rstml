@@ -61,7 +61,7 @@ impl NodeName {
                     return false;
                 }
                 let Some(last_ident) = e.path.segments.last() else {
-                    return false
+                    return false;
                 };
                 last_ident.ident == "_"
             }

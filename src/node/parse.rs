@@ -191,12 +191,18 @@ impl ParseRecoverable for NodeElement {
         let children = RawText::vec_set_context(open_tag_end, close_tag_start, children);
 
         let Some(close_tag) = close_tag else {
-            let mut diagnostic = Diagnostic::spanned(open_tag.span(), Level::Error, "open tag has no coresponding close tag");
+            let mut diagnostic = Diagnostic::spanned(
+                open_tag.span(),
+                Level::Error,
+                "open tag has no coresponding close tag",
+            );
             if !children.is_empty() {
                 let mut note_span = TokenStream::new();
-                children.iter().for_each(|v|v.to_tokens(&mut note_span));
-                diagnostic = diagnostic
-                                .span_note(note_span.span(), "treating all inputs after open tag as it content");
+                children.iter().for_each(|v| v.to_tokens(&mut note_span));
+                diagnostic = diagnostic.span_note(
+                    note_span.span(),
+                    "treating all inputs after open tag as it content",
+                );
             }
 
             parser.push_diagnostic(diagnostic);
