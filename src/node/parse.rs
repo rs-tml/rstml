@@ -193,12 +193,18 @@ impl ParseRecoverable for NodeElement {
         let children = RawText::vec_set_context(open_tag_end, close_tag_start, children);
 
         let Some(close_tag) = close_tag else {
-            let mut diagnostic = Diagnostic::spanned(open_tag.span(), Level::Error, "open tag has no coresponding close tag");
+            let mut diagnostic = Diagnostic::spanned(
+                open_tag.span(),
+                Level::Error,
+                "open tag has no coresponding close tag",
+            );
             if !children.is_empty() {
                 let mut note_span = TokenStream::new();
-                children.iter().for_each(|v|v.to_tokens(&mut note_span));
-                diagnostic = diagnostic
-                                .span_note(note_span.span(), "treating all inputs after open tag as it content");
+                children.iter().for_each(|v| v.to_tokens(&mut note_span));
+                diagnostic = diagnostic.span_note(
+                    note_span.span(),
+                    "treating all inputs after open tag as it content",
+                );
             }
 
             parser.push_diagnostic(diagnostic);
@@ -210,15 +216,23 @@ impl ParseRecoverable for NodeElement {
         };
 
         if close_tag.name != open_tag.name {
-            let diagnostic =
-                Diagnostic::spanned(close_tag.span(), Level::Error, "wrong close tag found")
+            match parser.config().element_close_wildcard.as_deref() {
+                Some(is_wildcard) if is_wildcard(&open_tag, &close_tag) => {}
+                _ => {
+                    let diagnostic = Diagnostic::spanned(
+                        close_tag.span(),
+                        Level::Error,
+                        "wrong close tag found",
+                    )
                     .spanned_child(
                         open_tag.span(),
                         Level::Help,
                         "open tag that should be closed; it's started here",
                     );
 
-            parser.push_diagnostic(diagnostic)
+                    parser.push_diagnostic(diagnostic)
+                }
+            }
         }
         if close_tag.generics != open_tag.generics {
             let diagnostic = Diagnostic::spanned(

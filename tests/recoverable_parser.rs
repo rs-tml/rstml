@@ -47,7 +47,9 @@ fn test_parse_invalid_block() -> Result<()> {
     let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
     assert!(!errors.is_empty());
 
-    let Node::Block(block) = &nodes[0].children().unwrap()[0] else { panic!("expected block") };
+    let Node::Block(block) = &nodes[0].children().unwrap()[0] else {
+        panic!("expected block")
+    };
 
     assert!(block.try_block().is_none());
 
@@ -66,7 +68,9 @@ fn test_parse_invalid_attr_block() -> Result<()> {
 
     assert!(!errors.is_empty());
 
-    let Node::Element(f) = &nodes[0] else { panic!("expected element") };
+    let Node::Element(f) = &nodes[0] else {
+        panic!("expected element")
+    };
     let NodeAttribute::Block(NodeBlock::Invalid { .. }) = f.attributes()[0] else {
         panic!("expected attribute")
     };
@@ -81,7 +85,9 @@ fn test_parse_closed_tag_without_open() -> Result<()> {
 
     assert!(!errors.is_empty());
 
-    let Node::Element(f) = &nodes[0] else { panic!("expected element") };
+    let Node::Element(f) = &nodes[0] else {
+        panic!("expected element")
+    };
     assert_eq!(f.open_tag.name.to_string(), "foo");
     Ok(())
 }
@@ -94,10 +100,14 @@ fn test_parse_open_tag_without_close() -> Result<()> {
 
     assert!(!errors.is_empty());
 
-    let Node::Element(f) = &nodes[0] else { panic!("expected element") };
+    let Node::Element(f) = &nodes[0] else {
+        panic!("expected element")
+    };
     assert_eq!(f.open_tag.name.to_string(), "foo");
 
-    let Node::Element(f) = &f.children[0] else { panic!("expected element") };
+    let Node::Element(f) = &f.children[0] else {
+        panic!("expected element")
+    };
     assert_eq!(f.open_tag.name.to_string(), "bar");
     Ok(())
 }

@@ -22,9 +22,15 @@
 //! let nodes = parse2(tokens)?;
 //!
 //! // Extract some specific nodes from the tree.
-//! let Node::Element(element) = &nodes[0] else { bail!("element") };
-//! let NodeAttribute::Attribute(attribute) = &element.attributes()[0] else { bail!("attribute") };
-//! let Node::Text(text) = &element.children[0] else { bail!("text") };
+//! let Node::Element(element) = &nodes[0] else {
+//!     bail!("element")
+//! };
+//! let NodeAttribute::Attribute(attribute) = &element.attributes()[0] else {
+//!     bail!("attribute")
+//! };
+//! let Node::Text(text) = &element.children[0] else {
+//!     bail!("text")
+//! };
 //!
 //! // Work with the nodes.
 //! assert_eq!(element.name().to_string(), "hello");

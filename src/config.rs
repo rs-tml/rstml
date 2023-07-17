@@ -3,9 +3,13 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 use proc_macro2::TokenStream;
 use syn::{parse::ParseStream, Result};
 
-use crate::node::NodeType;
+use crate::{
+    atoms::{CloseTag, OpenTag},
+    node::NodeType,
+};
 
 pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
+pub type ElementWildcardFn = dyn Fn(&OpenTag, &CloseTag) -> bool;
 
 /// Configures the `Parser` behavior
 #[derive(Default, Clone)]
@@ -17,6 +21,7 @@ pub struct ParserConfig {
     pub(crate) recover_block: bool,
     pub(crate) always_self_closed_elements: HashSet<&'static str>,
     pub(crate) raw_text_elements: HashSet<&'static str>,
+    pub(crate) element_close_wildcard: Option<Rc<ElementWildcardFn>>,
 }
 
 impl Debug for ParserConfig {
@@ -31,6 +36,10 @@ impl Debug for ParserConfig {
                 &self.always_self_closed_elements,
             )
             .field("raw_text_elements", &self.raw_text_elements)
+            .field(
+                "element_close_wildcard",
+                &self.element_close_wildcard.is_some(),
+            )
             .finish()
     }
 }
@@ -140,5 +149,43 @@ impl ParserConfig {
     {
         self.transform_block = Some(Rc::new(callback));
         self
+    }
+
+    /// Allows unmatched tag pairs where close tag matches a specified wildcard.
+    ///
+    /// For example:
+    ///
+    /// ```rust
+    /// use quote::quote;
+    /// use rstml::{
+    ///     node::{Node, NodeElement},
+    ///     Parser, ParserConfig,
+    /// };
+    /// use syn::{Expr, ExprRange, RangeLimits, Stmt};
+    ///
+    /// let config = ParserConfig::new()
+    ///     .element_close_wildcard(|_open_tag, close_tag| close_tag.name.is_wildcard());
+    ///
+    /// let tokens = quote! {
+    ///     <{"OpenTag"}>{"Content"}</_>
+    /// };
+    ///
+    /// Parser::new(config).parse_simple(tokens).unwrap();
+    /// ```
+    pub fn element_close_wildcard<F>(mut self, predicate: F) -> Self
+    where
+        F: Fn(&OpenTag, &CloseTag) -> bool + 'static,
+    {
+        self.element_close_wildcard = Some(Rc::new(predicate));
+        self
+    }
+    /// Allows unmatched tag pairs where close tag matches a specified wildcard.
+    ///
+    /// Uses default wildcard ident (`_`), and optionally check whenewer
+    /// open_tag name is block.
+    pub fn element_close_use_default_wildcard_ident(self, open_tag_should_be_block: bool) -> Self {
+        self.element_close_wildcard(move |open_tag, close_tag| {
+            close_tag.name.is_wildcard() && (!open_tag_should_be_block || open_tag.name.is_block())
+        })
     }
 }
