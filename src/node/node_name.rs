@@ -27,6 +27,49 @@ pub enum NodeName {
     Block(Block),
 }
 
+impl NodeName {
+    /// Returns true if `NodeName` parsed as block of code.
+    ///
+    /// Example:
+    /// {"Foo"}
+    pub fn is_block(&self) -> bool {
+        matches!(self, Self::Block(_))
+    }
+
+    /// Returns true if `NodeName` is dash seperated.
+    ///
+    /// Example:
+    /// foo-bar
+    pub fn is_dashed(&self) -> bool {
+        match self {
+            Self::Punctuated(p) => {
+                let p = p.pairs().next().unwrap();
+                p.punct().unwrap().as_char() == '-'
+            }
+            _ => false,
+        }
+    }
+
+    /// Returns true if `NodeName` is wildcard ident.
+    ///
+    /// Example:
+    /// _
+    pub fn is_wildcard(&self) -> bool {
+        match self {
+            Self::Path(e) => {
+                if e.path.segments.len() != 1 {
+                    return false;
+                }
+                let Some(last_ident) = e.path.segments.last() else {
+                    return false
+                };
+                last_ident.ident == "_"
+            }
+            _ => false,
+        }
+    }
+}
+
 impl TryFrom<&NodeName> for Block {
     type Error = Error;
 

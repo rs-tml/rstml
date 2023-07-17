@@ -18,7 +18,7 @@ use super::{
         CloseTag, FragmentClose, FragmentOpen, OpenTag,
     },
     raw_text::RawText,
-    Node, NodeBlock, NodeDoctype, NodeFragment, NodeName,
+    Node, NodeBlock, NodeDoctype, NodeFragment,
 };
 use crate::{
     atoms::CloseTagStart,
@@ -208,24 +208,8 @@ impl ParseRecoverable for NodeElement {
         };
 
         if close_tag.name != open_tag.name {
-            match (
-                &open_tag.name,
-                parser.config().block_element_close_wildcard.as_deref(),
-            ) {
-                (NodeName::Block(_), Some(is_wildcard)) if is_wildcard(&close_tag) => {}
-                (_, Some(is_wildcard)) if is_wildcard(&close_tag) => {
-                    let diagnostic = Diagnostic::spanned(
-                        close_tag.span(),
-                        Level::Error,
-                        "wildcard close tag can only be used with block open tag",
-                    )
-                    .spanned_child(
-                        open_tag.span(),
-                        Level::Help,
-                        "open tag that should be closed; it's started here",
-                    );
-                    parser.push_diagnostic(diagnostic)
-                }
+            match parser.config().element_close_wildcard.as_deref() {
+                Some(is_wildcard) if is_wildcard(&open_tag, &close_tag) => {}
                 _ => {
                     let diagnostic = Diagnostic::spanned(
                         close_tag.span(),

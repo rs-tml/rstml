@@ -43,7 +43,10 @@ use std::{collections::HashSet, fmt::Debug, rc::Rc};
 use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::parse::{Parse, ParseStream};
 
-use crate::{atoms::CloseTag, config::TransformBlockFn, ParserConfig};
+use crate::{
+    config::{ElementWildcardFn, TransformBlockFn},
+    ParserConfig,
+};
 
 /// Config of parser.
 /// Used to extend parsing functionality by user needs.
@@ -62,7 +65,7 @@ pub struct RecoveryConfig {
     pub(crate) raw_text_elements: HashSet<&'static str>,
     pub(crate) transform_block: Option<Rc<TransformBlockFn>>,
     /// Allows wildcard closing tag matching for blocks
-    pub(crate) block_element_close_wildcard: Option<Rc<dyn Fn(&CloseTag) -> bool>>,
+    pub(crate) element_close_wildcard: Option<Rc<ElementWildcardFn>>,
 }
 
 impl Debug for RecoveryConfig {
@@ -74,6 +77,10 @@ impl Debug for RecoveryConfig {
                 &self.always_self_closed_elements,
             )
             .field("raw_text_elements", &self.raw_text_elements)
+            .field(
+                "element_close_wildcard",
+                &self.element_close_wildcard.is_some(),
+            )
             .finish()
     }
 }
@@ -219,7 +226,7 @@ impl From<crate::ParserConfig> for RecoveryConfig {
             raw_text_elements: config.raw_text_elements.clone(),
             always_self_closed_elements: config.always_self_closed_elements.clone(),
             transform_block: config.transform_block.clone(),
-            block_element_close_wildcard: config.block_element_close_wildcard.clone(),
+            element_close_wildcard: config.element_close_wildcard.clone(),
         }
     }
 }

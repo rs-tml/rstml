@@ -509,6 +509,86 @@ fn test_reserved_keywords() -> Result<()> {
 }
 
 #[test]
+fn test_name_getter() -> Result<()> {
+    let tokens = quote! {
+        <{"block_element_name"} />
+        <dast-seperated />
+        <_ /> // wildcard
+    };
+
+    let nodes = parse2(tokens)?;
+
+    assert_eq!(nodes.len(), 3);
+    assert!(get_element(&nodes, 0).open_tag.name.is_block());
+    assert!(get_element(&nodes, 1).open_tag.name.is_dashed());
+    assert!(get_element(&nodes, 2).open_tag.name.is_wildcard());
+
+    Ok(())
+}
+
+#[test]
+#[should_panic = "wrong close tag found"]
+fn test_default_wildcard_failed_to_parse_block() {
+    let tokens = quote! {
+        <Foo> </ _>
+    };
+
+    let config = ParserConfig::new().element_close_use_default_wildcard_ident(true);
+    let _ = Parser::new(config).parse_simple(tokens).unwrap();
+}
+
+#[test]
+fn test_default_wildcard() -> Result<()> {
+    let tokens = quote! {
+        <{"block_element_name"}> </ _>
+    };
+
+    let config = ParserConfig::new().element_close_use_default_wildcard_ident(true);
+    let nodes = Parser::new(config).parse_simple(tokens).unwrap();
+    assert!(get_element(&nodes, 0)
+        .close_tag
+        .as_ref()
+        .unwrap()
+        .name
+        .is_wildcard());
+    Ok(())
+}
+
+#[test]
+fn test_default_wildcard_for_regular_element() -> Result<()> {
+    let tokens = quote! {
+        <Foo> </ _>
+    };
+
+    let config = ParserConfig::new().element_close_use_default_wildcard_ident(false);
+    let nodes = Parser::new(config).parse_simple(tokens).unwrap();
+    assert!(get_element(&nodes, 0)
+        .close_tag
+        .as_ref()
+        .unwrap()
+        .name
+        .is_wildcard());
+    Ok(())
+}
+
+#[test]
+fn test_custom_wildcard() -> Result<()> {
+    let tokens = quote! {
+        <Foo> </ WILDCARD>
+    };
+
+    let config = ParserConfig::new()
+        .element_close_wildcard(|_, close_tag| close_tag.name.to_string() == "WILDCARD");
+    let nodes = Parser::new(config).parse_simple(tokens).unwrap();
+    assert!(!get_element(&nodes, 0)
+        .close_tag
+        .as_ref()
+        .unwrap()
+        .name
+        .is_wildcard());
+    Ok(())
+}
+#[test]
 fn test_single_element_with_different_attributes() -> Result<()> {
     let tokens = quote! {
         <foo bar="moo" baz=0x10 bax=true bay=0.1 foz='c' foy={x} fo1=b'c'></foo>
