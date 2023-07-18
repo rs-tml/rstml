@@ -4,13 +4,7 @@ use std::vec;
 
 use proc_macro2::TokenStream;
 use proc_macro2_diagnostics::Diagnostic;
-use syn::{
-    ext::IdentExt,
-    parse::{discouraged::Speculative, Parse, ParseStream, Peek},
-    punctuated::Punctuated,
-    spanned::Spanned,
-    Ident, Result,
-};
+use syn::{parse::ParseStream, spanned::Spanned, Result};
 
 pub mod recoverable;
 
@@ -109,72 +103,5 @@ impl Parser {
 
         let nodes = if nodes.is_empty() { None } else { Some(nodes) };
         ParsingResult::from_parts(nodes, errors)
-    }
-
-    /// Parse the stream as punctuated idents.
-    ///
-    /// We can't replace this with [`Punctuated::parse_separated_nonempty`]
-    /// since that doesn't support reserved keywords. Might be worth to
-    /// consider a PR upstream.
-    ///
-    /// [`Punctuated::parse_separated_nonempty`]: https://docs.rs/syn/1.0.58/syn/punctuated/struct.Punctuated.html#method.parse_separated_nonempty
-    pub(crate) fn node_name_punctuated_ident<T: Parse, F: Peek, X: From<Ident>>(
-        input: ParseStream,
-        punct: F,
-    ) -> Result<Punctuated<X, T>> {
-        let fork = &input.fork();
-        let mut segments = Punctuated::<X, T>::new();
-
-        while !fork.is_empty() && fork.peek(Ident::peek_any) {
-            let ident = Ident::parse_any(fork)?;
-            segments.push_value(ident.clone().into());
-
-            if fork.peek(punct) {
-                segments.push_punct(fork.parse()?);
-            } else {
-                break;
-            }
-        }
-
-        if segments.len() > 1 {
-            input.advance_to(fork);
-            Ok(segments)
-        } else {
-            Err(fork.error("expected punctuated node name"))
-        }
-    }
-
-    /// Parse the stream as punctuated idents, with two possible punctuations
-    /// available
-    pub(crate) fn node_name_punctuated_ident_with_alternate<
-        T: Parse,
-        F: Peek,
-        G: Peek,
-        X: From<Ident>,
-    >(
-        input: ParseStream,
-        punct: F,
-        alternate_punct: G,
-    ) -> Result<Punctuated<X, T>> {
-        let fork = &input.fork();
-        let mut segments = Punctuated::<X, T>::new();
-
-        while !fork.is_empty() && fork.peek(Ident::peek_any) {
-            let ident = Ident::parse_any(fork)?;
-            segments.push_value(ident.clone().into());
-
-            if fork.peek(punct) || fork.peek(alternate_punct) {
-                segments.push_punct(fork.parse()?);
-            } else {
-                break;
-            }
-        }
-
-        if segments.len() > 1 {
-            input.advance_to(fork);
-            Ok(segments)
-        } else {
-            Err(fork.error("expected punctuated node name"))
-        }
     }
 }
