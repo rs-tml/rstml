@@ -7,7 +7,7 @@ use rstml::{
     node::{KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement, NodeType},
     parse2, Parser, ParserConfig,
 };
-use syn::{parse_quote, Block, LifetimeParam, TypeParam};
+use syn::{parse_quote, token::Colon, Block, LifetimeParam, Pat, PatType, Token, TypeParam};
 
 #[test]
 fn test_single_empty_element() -> Result<()> {
@@ -354,7 +354,7 @@ fn test_fn_bind_with_type() -> Result<()> {
     assert_eq!(binding.inputs.len(), 1);
     match binding.inputs.first().unwrap() {
         syn::Pat::Type(x) => {
-            assert!(matches!(&*x.pat, syn::Pat::Ident(x) if x.ident.to_string() == "x"));
+            assert!(matches!(&*x.pat, syn::Pat::Ident(x) if x.ident == "x"));
             match &*x.ty {
                 syn::Type::Path(p) => {
                     assert_eq!(p.path.segments.first().unwrap().ident.to_string(), "Y")
@@ -603,6 +603,7 @@ fn test_generics() -> Result<()> {
 
     Ok(())
 }
+
 #[test]
 fn test_generics_lifetime() -> Result<()> {
     let tokens = quote! {
@@ -617,6 +618,7 @@ fn test_generics_lifetime() -> Result<()> {
 
     Ok(())
 }
+
 #[test]
 fn test_generics_closed() -> Result<()> {
     let tokens = quote! {
@@ -660,6 +662,66 @@ fn test_generics_closed_not_match() -> Result<()> {
     let e = parse2(tokens).unwrap_err();
     assert_eq!(e.to_string(), "close tag generics missmatch");
     Ok(())
+}
+
+#[test]
+fn test_attribute_fn_binding() -> Result<()> {
+    let tokens = quote! {
+        <tag attribute(x:u32, // bind variable
+                Foo{y: Bar}:Foo, // destructing
+                baz // variable without type (like in closure)
+            ) />
+    };
+
+    let nodes = parse2(tokens)?;
+
+    assert_eq!(nodes.len(), 1);
+    let Node::Element(e) = &nodes[0] else {
+        unreachable!()
+    };
+    assert_eq!(e.attributes().len(), 1);
+    let NodeAttribute::Attribute(a) = &e.open_tag.attributes[0] else {
+        unreachable!()
+    };
+    assert_eq!(a.key.to_string(), "attribute");
+    let KeyedAttributeValue::Binding(b) = &a.possible_value else {
+        unreachable!()
+    };
+    assert_eq!(b.inputs.len(), 3);
+    let pat = &b.inputs[0];
+
+    let expected: PatType = PatType {
+        pat: parse_quote!(x),
+        colon_token: Colon::default(),
+        ty: parse_quote!(u32),
+        attrs: vec![],
+    };
+    assert_eq!(pat, &Pat::Type(expected));
+
+    let pat = &b.inputs[1];
+
+    let expected: PatType = PatType {
+        pat: parse_quote!(Foo { y: Bar }),
+        colon_token: Colon::default(),
+        ty: parse_quote!(Foo),
+        attrs: vec![],
+    };
+    assert_eq!(pat, &Pat::Type(expected));
+
+    let pat = &b.inputs[2];
+    assert_eq!(pat, &parse_quote!(baz));
+    Ok(())
+}
+
+#[test]
+// during parsing ="foo"
+#[should_panic = "invalid tag name or attribute key"]
+fn test_attribute_fn_binding_with_value_is_not_expected() {
+    let tokens = quote! {
+        <tag attribute(x:u32)="foo" />
+    };
+
+    parse2(tokens).unwrap();
 }
 
 #[test]

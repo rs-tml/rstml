@@ -69,7 +69,7 @@ pub enum KeyedAttributeValue {
 impl KeyedAttributeValue {
     pub fn to_value(&self) -> Option<&AttributeValueExpr> {
         match self {
-            KeyedAttributeValue::Value(v) => Some(&v),
+            KeyedAttributeValue::Value(v) => Some(v),
             KeyedAttributeValue::None => None,
             KeyedAttributeValue::Binding(_) => None,
         }
@@ -265,7 +265,7 @@ impl Parse for FnBinding {
     fn parse(stream: ParseStream) -> syn::Result<Self> {
         let content;
         let paren = syn::parenthesized!(content in stream);
-        let inputs = Punctuated::parse_terminated_with(&content, |stream| closure_arg(stream))?;
+        let inputs = Punctuated::parse_terminated_with(&content, closure_arg)?;
         Ok(Self { paren, inputs })
     }
 }
