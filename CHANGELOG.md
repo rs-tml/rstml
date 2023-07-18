@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2023-07-18
+
+### Chore
+
+- Clippy ci
+- Apply fmt fixes
+- Add tests for fn binding syntax.
+
+### Documentation
+
+- Doc test formatting
+
+
+### Features
+
+- Add generics support to node element.
+- FnBinding pattern
+- Feat: add number support in NodeName attribute
+Make NodeName compatible with SGML basic types specification (by adding support of more than one punctuation in series).
+
+
+### Fix
+
+- Allow wildcard in any element.
+
+### Other
+
+- Update README.md
+- Allow wildcard close tag for block elements
+
+- Make block element close wildcard more general
+
+
 ## [0.10.5] - 2023-05-17
 
 ### Chore
