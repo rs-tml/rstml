@@ -299,6 +299,30 @@ fn test_dashed_attribute_name() -> Result<()> {
 }
 
 #[test]
+#[should_panic = "Name must start with latin character"]
+fn test_dashed_attribute_name_integers_not_supported_at_beginning() {
+    let tokens = quote! {
+        <div 12-foo="bar" />
+    };
+
+    let _ = parse2(tokens).unwrap();
+}
+
+#[test]
+fn test_dashed_attribute_name_with_long_integer_suffixes() -> Result<()> {
+    let tokens = quote! {
+        <div data-14-32px-32mzxksq="bar" />
+    };
+
+    let nodes = parse2(tokens)?;
+    let attribute = get_element_attribute(&nodes, 0, 0);
+
+    assert_eq!(attribute.key.to_string(), "data-14-32px-32mzxksq");
+
+    Ok(())
+}
+
+#[test]
 fn test_coloned_attribute_name() -> Result<()> {
     let tokens = quote! {
         <div on:click={foo} />

@@ -1,16 +1,60 @@
-use std::{convert::TryFrom, fmt};
+use std::{
+    convert::TryFrom,
+    fmt::{self, Display},
+};
 
 use proc_macro2::Punct;
 use syn::{
     ext::IdentExt,
-    parse::{discouraged::Speculative, Parse},
+    parse::{discouraged::Speculative, Parse, ParseStream, Peek},
     punctuated::{Pair, Punctuated},
-    token::{Brace, Colon, PathSep},
-    Block, ExprPath, Ident, Path, PathSegment,
+    token::{Brace, Colon, Dot, PathSep},
+    Block, ExprPath, Ident, LitInt, Path, PathSegment,
 };
 
 use super::{atoms::tokens::Dash, path_to_string};
-use crate::{node::parse::block_expr, Error, Parser};
+use crate::{node::parse::block_expr, Error};
+
+#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+pub enum NodeNameFragment {
+    #[parse(peek = Ident::peek_any)]
+    Ident(#[parse(Ident::parse_any)] Ident),
+    #[parse(peek = LitInt)]
+    Literal(LitInt),
+    // In case when name contain more than one Punct in series
+    Empty,
+}
+impl NodeNameFragment {
+    fn peek_any(input: ParseStream) -> bool {
+        input.peek(Ident::peek_any) || input.peek(LitInt)
+    }
+}
+
+impl PartialEq<NodeNameFragment> for NodeNameFragment {
+    fn eq(&self, other: &NodeNameFragment) -> bool {
+        match (self, other) {
+            (NodeNameFragment::Ident(s), NodeNameFragment::Ident(o)) => s == o,
+            // compare literals by their string representation
+            // So 0x00 and 0 is would be different literals.
+            (NodeNameFragment::Literal(s), NodeNameFragment::Literal(o)) => {
+                s.to_string() == o.to_string()
+            }
+            (NodeNameFragment::Empty, NodeNameFragment::Empty) => true,
+            _ => false,
+        }
+    }
+}
+impl Eq for NodeNameFragment {}
+
+impl Display for NodeNameFragment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NodeNameFragment::Ident(i) => i.fmt(f),
+            NodeNameFragment::Literal(l) => l.fmt(f),
+            NodeNameFragment::Empty => Ok(()),
+        }
+    }
+}
 
 /// Name of the node.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
@@ -19,9 +63,25 @@ pub enum NodeName {
     /// be separated by double colons, e.g. `<foo::bar />`.
     Path(ExprPath),
 
+    ///
     /// Name separated by punctuation, e.g. `<div data-foo="bar" />` or `<div
     /// data:foo="bar" />`.
-    Punctuated(Punctuated<Ident, Punct>),
+    ///
+    /// It is fully compatible with SGML (ID/NAME) tokens format.
+    /// Which is described as follow:
+    /// ID and NAME tokens must begin with a letter ([A-Za-z]) and may be
+    /// followed by any number of letters, digits ([0-9]), hyphens ("-"),
+    /// underscores ("_"), colons (":"), and periods (".").
+    ///
+    /// Support more than one punctuation in series, in this case
+    /// `NodeNameFragment::Empty` would be used.
+    ///
+    /// Note: that punct and `NodeNameFragment` has different `Spans` and IDE
+    /// (rust-analyzer/idea) can controll them independently.
+    /// So if one needs to add semantic highlight or go-to definition to entire
+    /// `NodeName` it should emit helper statements for each `Punct` and
+    /// `NodeNameFragment` (excludeing `Empty` fragment).
+    Punctuated(Punctuated<NodeNameFragment, Punct>),
 
     /// Arbitrary rust code in braced `{}` blocks.
     Block(Block),
@@ -66,6 +126,75 @@ impl NodeName {
                 last_ident.ident == "_"
             }
             _ => false,
+        }
+    }
+
+    /// Parse the stream as punctuated idents.
+    ///
+    /// We can't replace this with [`Punctuated::parse_separated_nonempty`]
+    /// since that doesn't support reserved keywords. Might be worth to
+    /// consider a PR upstream.
+    ///
+    /// [`Punctuated::parse_separated_nonempty`]: https://docs.rs/syn/1.0.58/syn/punctuated/struct.Punctuated.html#method.parse_separated_nonempty
+    pub(crate) fn node_name_punctuated_ident<T: Parse, F: Peek, X: From<Ident>>(
+        input: ParseStream,
+        punct: F,
+    ) -> syn::Result<Punctuated<X, T>> {
+        let fork = &input.fork();
+        let mut segments = Punctuated::<X, T>::new();
+
+        while !fork.is_empty() && fork.peek(Ident::peek_any) {
+            let ident = Ident::parse_any(fork)?;
+            segments.push_value(ident.clone().into());
+
+            if fork.peek(punct) {
+                segments.push_punct(fork.parse()?);
+            } else {
+                break;
+            }
+        }
+
+        if segments.len() > 1 {
+            input.advance_to(fork);
+            Ok(segments)
+        } else {
+            Err(fork.error("expected punctuated node name"))
+        }
+    }
+
+    /// Parse the stream as punctuated idents, with two possible punctuations
+    /// available
+    pub(crate) fn node_name_punctuated_ident_with_two_alternate<
+        T: Parse,
+        F: Peek,
+        G: Peek,
+        H: Peek,
+        X: From<NodeNameFragment>,
+    >(
+        input: ParseStream,
+        punct: F,
+        alternate_punct: G,
+        alternate_punct2: H,
+    ) -> syn::Result<Punctuated<X, T>> {
+        let fork = &input.fork();
+        let mut segments = Punctuated::<X, T>::new();
+
+        while !fork.is_empty() && NodeNameFragment::peek_any(fork) {
+            let ident = NodeNameFragment::parse(fork)?;
+            segments.push_value(ident.clone().into());
+
+            if fork.peek(punct) || fork.peek(alternate_punct) || fork.peek(alternate_punct2) {
+                segments.push_punct(fork.parse()?);
+            } else {
+                break;
+            }
+        }
+
+        if segments.len() > 1 {
+            input.advance_to(fork);
+            Ok(segments)
+        } else {
+            Err(fork.error("expected punctuated node name"))
         }
     }
 }
@@ -142,8 +271,13 @@ impl fmt::Display for NodeName {
 
 impl Parse for NodeName {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek2(PathSep) {
-            Parser::node_name_punctuated_ident::<PathSep, fn(_) -> PathSep, PathSegment>(
+        if input.peek(LitInt) {
+            Err(syn::Error::new(
+                input.span(),
+                "Name must start with latin character",
+            ))
+        } else if input.peek2(PathSep) {
+            NodeName::node_name_punctuated_ident::<PathSep, fn(_) -> PathSep, PathSegment>(
                 input, PathSep,
             )
             .map(|segments| {
@@ -156,13 +290,14 @@ impl Parse for NodeName {
                     },
                 })
             })
-        } else if input.peek2(Colon) || input.peek2(Dash) {
-            Parser::node_name_punctuated_ident_with_alternate::<
+        } else if input.peek2(Colon) || input.peek2(Dash) || input.peek2(Dot) {
+            NodeName::node_name_punctuated_ident_with_two_alternate::<
                 Punct,
                 fn(_) -> Colon,
                 fn(_) -> Dash,
-                Ident,
-            >(input, Colon, Dash)
+                fn(_) -> Dot,
+                NodeNameFragment,
+            >(input, Colon, Dash, Dot)
             .map(NodeName::Punctuated)
         } else if input.peek(Brace) {
             let fork = &input.fork();
