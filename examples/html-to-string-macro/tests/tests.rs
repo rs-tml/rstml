@@ -1,4 +1,4 @@
-use rstml_to_string_macro::html;
+use rstml_to_string_macro::html_ide;
 
 // Using this parser, one can write docs and link html tags to them.
 // if this macro would be independent, it would be nicer to have docs in
@@ -18,7 +18,7 @@ fn test() {
     };
     let world = "planet";
     assert_eq!(
-        html! {
+        html_ide! {
             <!DOCTYPE html>
             <html>
                 <head>

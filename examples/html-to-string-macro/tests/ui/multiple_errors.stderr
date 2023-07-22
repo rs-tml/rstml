@@ -70,20 +70,6 @@ error: unexpected token: `}`
 18 |                     <div {"some-attribute-from-rust-blocks22".}>"3"</div>
    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0433]: failed to resolve: could not find `docs` in the crate root
-  --> tests/ui/multiple_errors.rs:4:5
-   |
-4  | /     html! {
-5  | |         <!DOCTYPE html>
-6  | |         <html>
-7  | |             <head>
-...  |
-25 | |
-26 | |     };
-   | |_____^ could not find `docs` in the crate root
-   |
-   = note: this error originates in the macro `html` (in Nightly builds, run with -Z macro-backtrace for more info)
-
 error[E0425]: cannot find value `x` in this scope
   --> tests/ui/multiple_errors.rs:12:28
    |
