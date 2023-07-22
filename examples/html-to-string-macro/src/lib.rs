@@ -142,6 +142,17 @@ fn walk_nodes<'a>(empty_elements: &HashSet<&str>, nodes: &'a Vec<Node>) -> WalkN
 /// ```
 #[proc_macro]
 pub fn html(tokens: TokenStream) -> TokenStream {
+    html_inner(tokens, false)
+}
+
+/// Same as html but also emit IDE helper statements.
+/// Open tests.rs in ide to see semantic highlight/goto def and docs.
+#[proc_macro]
+pub fn html_ide(tokens: TokenStream) -> TokenStream {
+    html_inner(tokens, true)
+}
+
+fn html_inner(tokens: TokenStream, ide_helper: bool) -> TokenStream {
     // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
     let empty_elements: HashSet<_> = [
         "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
@@ -163,7 +174,11 @@ pub fn html(tokens: TokenStream) -> TokenStream {
         collected_elements: elements,
         diagnostics,
     } = walk_nodes(&empty_elements, &nodes);
-    let docs = generate_tags_docs(elements);
+    let docs = if ide_helper {
+        generate_tags_docs(elements)
+    } else {
+        vec![]
+    };
     let errors = errors
         .into_iter()
         .map(|e| e.emit_as_expr_tokens())
@@ -193,7 +208,7 @@ fn generate_tags_docs(elements: Vec<&NodeName>) -> Vec<proc_macro2::TokenStream>
         .map(|e| {
             if elements_as_type.contains(&*e.to_string()) {
                 let element = quote_spanned!(e.span() => enum);
-                quote!({#element x{}})
+                quote!({#element X{}})
             } else {
                 // let _ = crate::docs::element;
                 let element = quote_spanned!(e.span() => element);
