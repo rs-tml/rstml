@@ -21,7 +21,7 @@ jobs:
         run: cargo build
 
       - name: test
-        run: cargo test --workspace
+        run: cargo test -p rstml
 
       - name: clippy
         run: cargo clippy --workspace
@@ -30,12 +30,6 @@ jobs:
 
       - name: test on Nightly
         run: cargo test --workspace
-
-      - name: test example-html-to-string
-        run: |
-          cd examples/html-to-string-macro
-          cargo +nightly test
-
 
       - name: coverage
         run: |
