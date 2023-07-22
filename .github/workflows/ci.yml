@@ -26,6 +26,17 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace
 
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - name: test on Nightly
+        run: cargo test --workspace
+
+      - name: test example-html-to-string
+        run: |
+          cd examples/html-to-string-macro
+          cargo +nightly test
+
+
       - name: coverage
         run: |
           cargo install cargo-tarpaulin

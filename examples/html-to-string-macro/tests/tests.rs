@@ -1,4 +1,4 @@
-use html_to_string_macro::html;
+use rstml_to_string_macro::html;
 
 // Using this parser, one can write docs and link html tags to them.
 // if this macro would be independent, it would be nicer to have docs in
@@ -11,7 +11,7 @@ pub mod docs {
 fn test() {
     let nightly_unqoted = " Hello  world with spaces ";
     let stable_unqoted = "Hello world with spaces";
-    let unquoted_text = if cfg!(feature = "nightly") {
+    let unquoted_text = if cfg!(rstml_signal_nightly) {
         nightly_unqoted
     } else {
         stable_unqoted
@@ -45,11 +45,11 @@ fn test() {
                 </head>
                 <body>
                     <!-- comment -->
-                    <div hello="planet"/>
+                    <div hello="planet"></div>
                     <div>1</div>
                     <div>{}</div>
                     <div>3</div>
-                    <div some-attribute-from-rust-block/>
+                    <div some-attribute-from-rust-block></div>
                 </body>
             </html>
         "#,

@@ -15,6 +15,8 @@ struct WalkNodesOutput<'a> {
     // Use proc_macro2::TokenStream instead of syn::Expr
     // to provide more errors to the end user.
     values: Vec<proc_macro2::TokenStream>,
+    // Additional diagnostic messages.
+    diagnostics: Vec<proc_macro2::TokenStream>,
     // Collect elements to provide semantic highlight based on element tag.
     // No differences between open tag and closed tag.
     // Also multiple tags with same name can be present,
@@ -25,11 +27,12 @@ impl<'a> WalkNodesOutput<'a> {
     fn extend(&mut self, other: WalkNodesOutput<'a>) {
         self.static_format.push_str(&other.static_format);
         self.values.extend(other.values);
+        self.diagnostics.extend(other.diagnostics);
         self.collected_elements.extend(other.collected_elements);
     }
 }
 
-fn walk_nodes(nodes: &Vec<Node>) -> WalkNodesOutput<'_> {
+fn walk_nodes<'a>(empty_elements: &HashSet<&str>, nodes: &'a Vec<Node>) -> WalkNodesOutput<'a> {
     let mut out = WalkNodesOutput::default();
 
     for node in nodes {
@@ -64,22 +67,25 @@ fn walk_nodes(nodes: &Vec<Node>) -> WalkNodesOutput<'_> {
                         }
                     }
                 }
-                // In HTML selfclosing slash is ignored but for embeded SVG or MathML it
-                // meaningfull.
-                if element.open_tag.is_self_closed() {
-                    out.static_format.push('/');
+                // Ignore childs of special Empty elements
+                if empty_elements.contains(element.open_tag.name.to_string().as_str()) {
+                    out.static_format
+                        .push_str(&format!("/</{}>", element.open_tag.name));
+                    if !element.children.is_empty() {
+                        let warning = proc_macro2_diagnostics::Diagnostic::spanned(
+                            element.open_tag.name.span(),
+                            proc_macro2_diagnostics::Level::Warning,
+                            "Element is processed as empty, and cannot have any child",
+                        );
+                        out.diagnostics.push(warning.emit_as_expr_tokens())
+                    }
+
+                    continue;
                 }
                 out.static_format.push('>');
 
-                // skip emiting childs if
-                //  - no closing tag (self closed, or self closed without marker)
-                //  - but element is valid and no childs left
-                if element.close_tag.is_none() && element.children.is_empty() {
-                    continue;
-                }
-
                 // children
-                let other_output = walk_nodes(&element.children);
+                let other_output = walk_nodes(empty_elements, &element.children);
                 out.extend(other_output);
                 out.static_format.push_str(&format!("</{}>", name));
             }
@@ -94,7 +100,7 @@ fn walk_nodes(nodes: &Vec<Node>) -> WalkNodesOutput<'_> {
                 out.values.push(TokenTree::from(literal).into());
             }
             Node::Fragment(fragment) => {
-                let other_output = walk_nodes(&fragment.children);
+                let other_output = walk_nodes(empty_elements, &fragment.children);
                 out.extend(other_output)
             }
             Node::Comment(comment) => {
@@ -121,7 +127,7 @@ fn walk_nodes(nodes: &Vec<Node>) -> WalkNodesOutput<'_> {
 /// # Example
 ///
 /// ```
-/// use html_to_string_macro::html;
+/// use rstml_to_string_macro::html;
 /// // using this macro, one should write docs module on top level of crate.
 /// // Macro will link html tags to them.
 /// pub mod docs {
@@ -136,17 +142,16 @@ fn walk_nodes(nodes: &Vec<Node>) -> WalkNodesOutput<'_> {
 /// ```
 #[proc_macro]
 pub fn html(tokens: TokenStream) -> TokenStream {
+    // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    let empty_elements: HashSet<_> = [
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+        "source", "track", "wbr",
+    ]
+    .into_iter()
+    .collect();
     let config = ParserConfig::new()
         .recover_block(true)
-        // https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
-        .always_self_closed_elements(
-            [
-                "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
-                "param", "source", "track", "wbr",
-            ]
-            .into_iter()
-            .collect(),
-        )
+        .always_self_closed_elements(empty_elements.clone())
         .raw_text_elements(["script", "style"].into_iter().collect());
 
     let parser = Parser::new(config);
@@ -156,9 +161,13 @@ pub fn html(tokens: TokenStream) -> TokenStream {
         static_format: html_string,
         values,
         collected_elements: elements,
-    } = walk_nodes(&nodes);
+        diagnostics,
+    } = walk_nodes(&empty_elements, &nodes);
     let docs = generate_tags_docs(elements);
-    let errors = errors.into_iter().map(|e| e.emit_as_expr_tokens());
+    let errors = errors
+        .into_iter()
+        .map(|e| e.emit_as_expr_tokens())
+        .chain(diagnostics);
     quote! {
         {
             // Make sure that "compile_error!(..);"  can be used in this context.
