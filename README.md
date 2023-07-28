@@ -43,7 +43,16 @@ assert_eq!(attribute.key.to_string(), "world");
 assert_eq!(String::try_from(&text.value)?, "hi");
 ```
 
-You might want to check out the [html-to-string-macro example] as well.
+## Powered by rstml
+
+- [html-to-string-macro](https://github.com/rs-tml/rstml/tree/main/examples/html-to-string-macro) - basic example of 
+rstml usage that uses `format!` macro to stringify html.
+- [html-node](https://github.com/vidhanio/html-node) - more powerfull version of `html-to-string` macro that convert html representation to [Rust types](https://docs.rs/html-node/latest/html_node/enum.Node.html), which can be used to runtime introspection. Each of this type has `Display` and `Debug` 
+implementation and therefore can be used to pretty print html node.
+- [leptos](https://github.com/leptos-rs/leptos) - framework for web application. `Rstml` is used inside `view`/`template` macros and for `hot-reload` feature.
+- [leptosfmt](https://github.com/bram209/leptosfmt) - a wrapper of rustfmt tool for `leptos` which can format html/xml code inside `view` macros.
+- [sauron](https://github.com/ivanceras/sauron) - a versatile web framework and library for building client-side and/or server-side web application.
+  
 
 ## Features
 
