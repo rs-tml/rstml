@@ -16,7 +16,7 @@ mod raw_text;
 pub use attribute::{
     AttributeValueExpr, FnBinding, KeyedAttribute, KeyedAttributeValue, NodeAttribute,
 };
-pub use node_name::NodeName;
+pub use node_name::{NodeName, NodeNameFragment};
 pub use node_value::NodeBlock;
 
 pub use self::raw_text::RawText;
