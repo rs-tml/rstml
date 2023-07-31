@@ -52,7 +52,7 @@ error: close tag was parsed while waiting for open tag
 24 |         </html>
    |          ^
 
-error: open tag has no coresponding close tag
+error: open tag has no corresponding close tag
   --> tests/ui/multiple_errors.rs:24:9
    |
 24 |         </html>

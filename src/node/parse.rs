@@ -196,7 +196,7 @@ impl ParseRecoverable for NodeElement {
             let mut diagnostic = Diagnostic::spanned(
                 open_tag.span(),
                 Level::Error,
-                "open tag has no coresponding close tag",
+                "open tag has no corresponding close tag",
             );
             if !children.is_empty() {
                 let mut note_span = TokenStream::new();
