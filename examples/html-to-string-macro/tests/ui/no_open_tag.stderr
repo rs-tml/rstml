@@ -4,7 +4,7 @@ error: close tag was parsed while waiting for open tag
 5 |             </html>
   |              ^
 
-error: open tag has no coresponding close tag
+error: open tag has no corresponding close tag
  --> tests/ui/no_open_tag.rs:5:13
   |
 5 |             </html>

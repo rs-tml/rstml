@@ -1,4 +1,4 @@
-error: open tag has no coresponding close tag
+error: open tag has no corresponding close tag
  --> tests/ui/not_closed_tag.rs:5:13
   |
 5 |             <html>
