@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.11.1] - 2023-08-10
+## [0.11.2] - 2023-08-14
 
 ### Chore
 
@@ -18,6 +18,11 @@ All notable changes to this project will be documented in this file.
 ### Fix
 
 - Export NodeNameFragment
+
+### Other
+
+- Coresponding -> corresponding
+
 
 ## [0.11.0] - 2023-07-18
 
