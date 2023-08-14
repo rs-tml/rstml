@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2023-08-10
+
+### Chore
+
+- Update html-to-macro example
+- Move ide feature of html-to-string example to separate macro.
+- Fix ci
+- Add powered by section in readme.
+
+### Features
+
+- Allow disabling color diagnostics
+
+### Fix
+
+- Export NodeNameFragment
+
 ## [0.11.0] - 2023-07-18
 
 ### Chore
