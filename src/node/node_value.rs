@@ -4,7 +4,9 @@ use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{token::Brace, Block};
+use syn::{parse::Parse, token::Brace, Block};
+
+use crate::recoverable::RecoverableContext;
 
 /// Block node.
 ///
@@ -66,5 +68,13 @@ impl ToTokens for NodeBlock {
             }
             Self::ValidBlock(b) => b.to_tokens(tokens),
         }
+    }
+}
+
+impl Parse for NodeBlock {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let mut context = RecoverableContext::default();
+        let block = context.parse_recoverable(input);
+        context.parse_result(block).into_result()
     }
 }
