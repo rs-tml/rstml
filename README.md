@@ -24,7 +24,7 @@ use std::convert::TryFrom;
 
 use eyre::bail;
 use quote::quote;
-use rstml::{parse2, Node, NodeAttribute, NodeElement, NodeText};
+use rstml::{parse2, node::{Node, NodeAttribute, NodeElement, NodeText}};
 
 // Create HTML `TokenStream`.
 let tokens = quote! { <hello world>"hi"</hello> };
