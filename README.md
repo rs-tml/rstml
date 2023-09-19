@@ -24,7 +24,10 @@ use std::convert::TryFrom;
 
 use eyre::bail;
 use quote::quote;
-use rstml::{parse2, node::{Node, NodeAttribute, NodeElement, NodeText}};
+use rstml::{
+    node::{Node, NodeAttribute, NodeElement, NodeText},
+    parse2,
+};
 
 // Create HTML `TokenStream`.
 let tokens = quote! { <hello world>"hi"</hello> };
@@ -33,14 +36,20 @@ let tokens = quote! { <hello world>"hi"</hello> };
 let nodes = parse2(tokens)?;
 
 // Extract some specific nodes from the tree.
-let Node::Element(element) = &nodes[0] else { bail!("element") };
-let Node::Attribute(attribute) = &element.attributes[0] else { bail!("attribute") };
-let Node::Text(text) = &element.children[0] else { bail!("text") };
+let Node::Element(element) = &nodes[0] else {
+    bail!("element")
+};
+let NodeAttribute::Attribute(attribute) = &element.attributes()[0] else {
+    bail!("attribute")
+};
+let Node::Text(text) = &element.children[0] else {
+    bail!("text")
+};
 
 // Work with the nodes.
-assert_eq!(element.name.to_string(), "hello");
+assert_eq!(element.name().to_string(), "hello");
 assert_eq!(attribute.key.to_string(), "world");
-assert_eq!(String::try_from(&text.value)?, "hi");
+assert_eq!(text.value_string(), "hi");
 ```
 
 ## Powered by rstml
