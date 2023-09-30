@@ -176,9 +176,10 @@
 //! nodes that was parsed.
 //!
 //! ```rust
+//!   # use std::convert::Infallible;
 //!   # use quote::quote;
 //!   # use rstml::{Parser, ParserConfig};
-//!   # Parser::new(ParserConfig::default()).parse_recoverable(quote! {
+//!   # Parser::new(ParserConfig::default()).parse_recoverable::<Infallible>(quote! {
 //!  <div hello={world.} /> <!-- dot after world is invalid syn expression -->
 //!   <>
 //!       <div>"1"</x> <!-- incorrect closed tag -->
@@ -203,14 +204,17 @@
 //! configuration.
 //!
 //!   One highlight with regards to customization is the [`transform_block`]
-//!   configuration, which takes a closure that receives raw block content as
-//!   `ParseStream` and lets you optionally convert it to a `TokenStream`. That
-//! makes it   possible to have custom syntax in blocks. More details in [#9]
+//! configuration, which takes a closure that receives raw block content as
+//! `ParseStream` and lets you optionally convert it to a `TokenStream`. That
+//! makes it possible to have custom syntax in blocks. More details in [#9].
 //!
+//!   Additionally, [`CustomNode`] can be used to implement fully custom
+//! parsing.
 //!
 //! [`syn`]: /syn
 //! [`TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
 //! [`Node`]: enum.Node.html
+//! [`CustomNode`]: trait.CustomNode.html
 //! [`Span::join`]: https://doc.rust-lang.org/proc_macro/struct.Span.html#method.join
 //! [`Span::source_text`]: https://doc.rust-lang.org/proc_macro/struct.Span.html#method.source_text
 //! [`ParserConfig`]: struct.ParserConfig.html
@@ -231,7 +235,7 @@ mod parser;
 pub use config::ParserConfig;
 pub use error::Error;
 pub use node::atoms;
-use node::Node;
+use node::{CustomNode, Node};
 pub use parser::{recoverable, recoverable::ParsingResult, Parser};
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree.
@@ -240,6 +244,20 @@ pub use parser::{recoverable, recoverable::ParsingResult, Parser};
 /// [`Node`]: struct.Node.html
 pub fn parse(tokens: proc_macro::TokenStream) -> Result<Vec<Node>> {
     Parser::new(ParserConfig::default()).parse_simple(tokens)
+}
+
+/// Parse the given [`proc-macro2::TokenStream`] or
+/// [`proc-macro::TokenStream`] into a [`Node`] tree with the [`CustomNode`]
+/// C.
+///
+/// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
+/// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
+/// [`CustomNode`]: trait.CustomNode.html
+/// [`Node`]: struct.Node.html
+pub fn parse_custom<C: CustomNode>(
+    tokens: impl Into<proc_macro2::TokenStream>,
+) -> Result<Vec<Node<C>>> {
+    Parser::new(ParserConfig::default()).parse_custom(tokens)
 }
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree with custom

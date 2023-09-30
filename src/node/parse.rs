@@ -6,7 +6,7 @@ use proc_macro2_diagnostics::{Diagnostic, Level};
 use quote::ToTokens;
 use syn::{
     braced,
-    parse::{discouraged::Speculative, Parse, ParseStream, Parser as _},
+    parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     spanned::Spanned,
     token::Brace,
     Block, Ident, LitStr, Token,
@@ -18,7 +18,7 @@ use super::{
         CloseTag, FragmentClose, FragmentOpen, OpenTag,
     },
     raw_text::RawText,
-    Node, NodeBlock, NodeDoctype, NodeFragment,
+    CustomNode, Node, NodeBlock, NodeDoctype, NodeFragment,
 };
 use crate::{
     atoms::CloseTagStart,
@@ -56,7 +56,7 @@ impl ParseRecoverable for NodeBlock {
     }
 }
 
-impl ParseRecoverable for NodeFragment {
+impl<C: CustomNode> ParseRecoverable for NodeFragment<C> {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let tag_open: FragmentOpen = parser.parse_simple(input)?;
 
@@ -66,10 +66,10 @@ impl ParseRecoverable for NodeFragment {
             let (child, closed_tag) =
                 parser.parse_with_ending(input, |_, t| RawText::from(t), FragmentClose::parse);
 
-            (vec![Node::RawText(child)], closed_tag)
+            (vec![Node::<C>::RawText(child)], closed_tag)
         } else {
             let (child, close_tag_start) =
-                parser.parse_tokens_until::<Node, _, _>(input, CloseTagStart::parse);
+                parser.parse_tokens_until::<Node<C>, _, _>(input, CloseTagStart::parse);
             (
                 child,
                 FragmentClose::parse_with_start_tag(parser, input, close_tag_start),
@@ -149,7 +149,7 @@ impl ParseRecoverable for OpenTag {
     }
 }
 
-impl ParseRecoverable for NodeElement {
+impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let open_tag: OpenTag = parser.parse_recoverable(input)?;
         let is_known_self_closed =
@@ -180,7 +180,7 @@ impl ParseRecoverable for NodeElement {
             // invalid closing tags.
             // Also parse only </ part to recover parser as soon as user types </
             let (children, close_tag) =
-                parser.parse_tokens_until::<Node, _, _>(input, CloseTagStart::parse);
+                parser.parse_tokens_until::<Node<C>, _, _>(input, CloseTagStart::parse);
 
             let close_tag = CloseTag::parse_with_start_tag(parser, input, close_tag);
 
@@ -255,9 +255,11 @@ impl ParseRecoverable for NodeElement {
     }
 }
 
-impl ParseRecoverable for Node {
+impl<C: CustomNode> ParseRecoverable for Node<C> {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
-        let node = if input.peek(Token![<]) {
+        let node = if C::peek_element(input) {
+            Node::Custom(C::parse_element(parser, input)?)
+        } else if input.peek(Token![<]) {
             if input.peek2(Token![!]) {
                 if input.peek3(Ident) {
                     Node::Doctype(parser.parse_recoverable(input)?)
@@ -318,7 +320,7 @@ impl RecoverableContext {
         stop: F,
     ) -> (Vec<T>, Option<U>)
     where
-        T: ParseRecoverable + std::fmt::Debug + Spanned,
+        T: ParseRecoverable + Spanned,
         F: Fn(ParseStream) -> syn::Result<U>,
     {
         let mut collection = vec![];
@@ -359,7 +361,7 @@ impl RecoverableContext {
         separator: F,
     ) -> (Vec<T>, Option<U>)
     where
-        T: ParseRecoverable + std::fmt::Debug,
+        T: ParseRecoverable,
         F: Fn(ParseStream) -> syn::Result<U>,
     {
         let parser = |parser: &mut Self, tokens: TokenStream| {

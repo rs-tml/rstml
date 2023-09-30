@@ -10,9 +10,10 @@
 //!
 //! Example:
 //! ```rust
+//!   # use std::convert::Infallible;
 //!   # use quote::quote;
 //!   # use rstml::{Parser, ParserConfig};
-//!   # Parser::new(ParserConfig::default()).parse_recoverable(quote! {
+//!   # Parser::new(ParserConfig::default()).parse_recoverable::<Infallible>(quote! {
 //!   <div hello={world.} /> // dot after world is invalid syn::Expr
 //!   <>
 //!       <div>"1"</x> // incorrect closed tag
