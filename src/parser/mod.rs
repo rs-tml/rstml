@@ -1,6 +1,6 @@
 //! RSX Parser
 
-use std::vec;
+use std::{convert::Infallible, vec};
 
 use proc_macro2::TokenStream;
 use proc_macro2_diagnostics::Diagnostic;
@@ -33,13 +33,27 @@ impl Parser {
     /// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
     /// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
     /// [`Node`]: struct.Node.html
-    pub fn parse_simple(&self, v: impl Into<TokenStream>) -> Result<Vec<Node>> {
+    pub fn parse_simple(&self, v: impl Into<TokenStream>) -> Result<Vec<Node<Infallible>>> {
+        self.parse_recoverable(v).into_result()
+    }
+
+    /// Parse the given [`proc-macro2::TokenStream`] or
+    /// [`proc-macro::TokenStream`] into a [`Node`] tree with the [`CustomNode`]
+    /// C.
+    ///
+    /// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
+    /// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
+    /// [`Node`]: struct.Node.html
+    pub fn parse_custom<C: CustomNode>(&self, v: impl Into<TokenStream>) -> Result<Vec<Node<C>>> {
         self.parse_recoverable(v).into_result()
     }
 
     /// Advance version of `parse_simple` that returns array of errors in case
     /// of partial parsing.
-    pub fn parse_recoverable(&self, v: impl Into<TokenStream>) -> ParsingResult<Vec<Node>> {
+    pub fn parse_recoverable<C: CustomNode>(
+        &self,
+        v: impl Into<TokenStream>,
+    ) -> ParsingResult<Vec<Node<C>>> {
         use syn::parse::Parser as _;
         let parser = move |input: ParseStream| Ok(self.parse_syn_stream(input));
         let res = parser.parse2(v.into());
@@ -47,7 +61,10 @@ impl Parser {
     }
 
     /// Parse a given [`ParseStream`].
-    pub fn parse_syn_stream(&self, input: ParseStream) -> ParsingResult<Vec<Node>> {
+    pub fn parse_syn_stream<C: CustomNode>(
+        &self,
+        input: ParseStream,
+    ) -> ParsingResult<Vec<Node<C>>> {
         let mut nodes = vec![];
         let mut top_level_nodes = 0;
 

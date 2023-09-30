@@ -7,7 +7,7 @@ use syn::{
     LitStr, Token,
 };
 
-use super::Node;
+use super::{CustomNode, Node};
 
 /// Raw unquoted text
 ///
@@ -84,11 +84,11 @@ impl RawText {
         self.token_stream.is_empty()
     }
 
-    pub(crate) fn vec_set_context(
+    pub(crate) fn vec_set_context<C: CustomNode>(
         open_tag_end: Span,
         close_tag_start: Option<Span>,
-        mut children: Vec<Node>,
-    ) -> Vec<Node> {
+        mut children: Vec<Node<C>>,
+    ) -> Vec<Node<C>> {
         let spans: Vec<Span> = Some(open_tag_end)
             .into_iter()
             .chain(children.iter().map(|n| n.span()))

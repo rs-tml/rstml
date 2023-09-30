@@ -1,4 +1,7 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::{
+    convert::{Infallible, TryFrom},
+    str::FromStr,
+};
 
 use eyre::Result;
 use proc_macro2::TokenStream;
@@ -18,7 +21,7 @@ fn test_recover_incorrect_closing_tags() {
     // by default parse return error
     assert!(parser.parse_simple(stream.clone()).is_err());
 
-    let (nodes, _errors) = parser.parse_recoverable(stream).split_vec();
+    let (nodes, _errors) = parser.parse_recoverable::<Infallible>(stream).split_vec();
     assert_eq!(nodes.len(), 1);
     let Node::Element(e) = &nodes[0] else {
         panic!("Not element")
@@ -44,7 +47,9 @@ fn test_parse_invalid_block() -> Result<()> {
     )
     .unwrap();
     let config = ParserConfig::new().recover_block(true);
-    let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let (nodes, errors) = Parser::new(config)
+        .parse_recoverable::<Infallible>(tokens)
+        .split_vec();
     assert!(!errors.is_empty());
 
     let Node::Block(block) = &nodes[0].children().unwrap()[0] else {
@@ -64,7 +69,9 @@ fn test_parse_invalid_attr_block() -> Result<()> {
     )
     .unwrap();
     let config = ParserConfig::new().recover_block(true);
-    let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let (nodes, errors) = Parser::new(config)
+        .parse_recoverable::<Infallible>(tokens)
+        .split_vec();
 
     assert!(!errors.is_empty());
 
@@ -81,7 +88,9 @@ fn test_parse_invalid_attr_block() -> Result<()> {
 fn test_parse_closed_tag_without_open() -> Result<()> {
     let tokens = TokenStream::from_str("</foo>").unwrap();
     let config = ParserConfig::new().recover_block(true);
-    let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let (nodes, errors) = Parser::new(config)
+        .parse_recoverable::<Infallible>(tokens)
+        .split_vec();
 
     assert!(!errors.is_empty());
 
@@ -96,7 +105,9 @@ fn test_parse_closed_tag_without_open() -> Result<()> {
 fn test_parse_open_tag_without_close() -> Result<()> {
     let tokens = TokenStream::from_str("<foo> <bar></foo>").unwrap();
     let config = ParserConfig::new().recover_block(true);
-    let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let (nodes, errors) = Parser::new(config)
+        .parse_recoverable::<Infallible>(tokens)
+        .split_vec();
 
     assert!(!errors.is_empty());
 

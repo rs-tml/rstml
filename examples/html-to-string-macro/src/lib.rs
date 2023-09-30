@@ -111,6 +111,7 @@ fn walk_nodes<'a>(empty_elements: &HashSet<&str>, nodes: &'a Vec<Node>) -> WalkN
                 out.static_format.push_str("{}");
                 out.values.push(block.to_token_stream());
             }
+            Node::Custom(custom) => match *custom {},
         }
     }
 
