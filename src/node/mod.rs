@@ -11,6 +11,7 @@ mod attribute;
 mod node_name;
 mod node_value;
 pub mod parse;
+mod parser_ext;
 mod raw_text;
 
 pub use attribute::{

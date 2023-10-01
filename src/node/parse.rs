@@ -113,8 +113,11 @@ impl ParseRecoverable for NodeDoctype {
     }
 }
 
-impl ParseRecoverable for OpenTag {
-    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+impl OpenTag {
+    pub fn parse_start_tag(
+        parser: &mut RecoverableContext,
+        input: ParseStream,
+    ) -> Option<Token![<]> {
         let token_lt = parser.parse_simple::<Token![<]>(input)?;
         // Found closing tag when open tag was expected
         // keep parsing it as open tag.
@@ -130,6 +133,13 @@ impl ParseRecoverable for OpenTag {
                 "close tag was parsed while waiting for open tag",
             ));
         }
+        Some(token_lt)
+    }
+}
+
+impl ParseRecoverable for OpenTag {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+        let token_lt = Self::parse_start_tag(parser, input)?;
         let name = parser.parse_simple(input)?;
         let generics = parser.parse_simple(input)?;
 
@@ -149,23 +159,14 @@ impl ParseRecoverable for OpenTag {
     }
 }
 
-impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
-    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
-        let open_tag: OpenTag = parser.parse_recoverable(input)?;
-        let is_known_self_closed =
-            |name| parser.config().always_self_closed_elements.contains(name);
-        let is_raw = |name| parser.config().raw_text_elements.contains(name);
-
-        let tag_name_str = &*open_tag.name.to_string();
-        if open_tag.is_self_closed() || is_known_self_closed(tag_name_str) {
-            return Some(NodeElement {
-                open_tag,
-                children: vec![],
-                close_tag: None,
-            });
-        }
-
-        let (children, close_tag) = if is_raw(tag_name_str) {
+impl<C: CustomNode> NodeElement<C> {
+    pub fn parse_children(
+        parser: &mut RecoverableContext,
+        input: ParseStream,
+        raw: bool,
+        open_tag: &OpenTag,
+    ) -> Option<(Vec<Node<C>>, Option<CloseTag>)> {
+        let (children, close_tag) = if raw {
             let (child, closed_tag) =
                 parser.parse_with_ending(input, |_, t| RawText::from(t), CloseTag::parse);
             // don't keep empty RawText
@@ -207,11 +208,7 @@ impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
             }
 
             parser.push_diagnostic(diagnostic);
-            return Some(NodeElement {
-                open_tag,
-                children,
-                close_tag: None,
-            });
+            return Some((children, None));
         };
 
         if close_tag.name != open_tag.name {
@@ -246,10 +243,31 @@ impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
             );
             parser.push_diagnostic(diagnostic)
         }
+        Some((children, Some(close_tag)))
+    }
+}
+
+impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+        let open_tag: OpenTag = parser.parse_recoverable(input)?;
+        let is_known_self_closed =
+            |name| parser.config().always_self_closed_elements.contains(name);
+        let is_raw = |name| parser.config().raw_text_elements.contains(name);
+
+        let tag_name_str = &*open_tag.name.to_string();
+        if open_tag.is_self_closed() || is_known_self_closed(tag_name_str) {
+            return Some(NodeElement {
+                open_tag,
+                children: vec![],
+                close_tag: None,
+            });
+        }
+        let (children, close_tag) =
+            Self::parse_children(parser, input, is_raw(tag_name_str), &open_tag)?;
         let element = NodeElement {
             open_tag,
             children,
-            close_tag: Some(close_tag),
+            close_tag,
         };
         Some(element)
     }
