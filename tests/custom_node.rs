@@ -1,8 +1,9 @@
-use quote::{ToTokens, TokenStreamExt};
+use quote::{quote, ToTokens, TokenStreamExt};
 use rstml::{
     atoms::{self, OpenTag, OpenTagEnd},
     node::{CustomNode, Node, NodeElement},
     recoverable::Recoverable,
+    Parser, ParserConfig,
 };
 use syn::{parse_quote, Expr, Token};
 
@@ -71,6 +72,28 @@ fn custom_node() {
         </if>
     };
     let Node::Custom(actual) = actual.inner() else {
+        panic!()
+    };
+
+    assert_eq!(actual.condition, parse_quote!(just && an || expression));
+}
+
+#[test]
+fn custom_node_using_config() {
+    let actual = Parser::new(
+        ParserConfig::new()
+            .element_close_use_default_wildcard_ident(false)
+            .custom_node::<If>(),
+    )
+    .parse_simple(quote! {
+        <if just && an || expression>
+            <a regular="html" component/>
+            <div>
+            </div>
+        </_>
+    })
+    .unwrap();
+    let Node::Custom(actual) = &actual[0] else {
         panic!()
     };
 

@@ -223,7 +223,7 @@ fn test_block_node() -> Result<()> {
 
 #[test]
 fn test_flat_tree() -> Result<()> {
-    let config = ParserConfig::new().flat_tree();
+    let config: ParserConfig = ParserConfig::new().flat_tree();
 
     let tokens = quote! {
         <div>
@@ -527,7 +527,7 @@ fn test_transform_block_none() -> Result<()> {
         <div>{"foo"}</div>
     };
 
-    let config = ParserConfig::new().transform_block(|_| Ok(None));
+    let config: ParserConfig = ParserConfig::new().transform_block(|_| Ok(None));
     let nodes = Parser::new(config).parse_simple(tokens);
 
     assert!(nodes.is_ok());
@@ -788,7 +788,7 @@ fn test_default_wildcard_failed_to_parse_block() {
         <Foo> </ _>
     };
 
-    let config = ParserConfig::new().element_close_use_default_wildcard_ident(true);
+    let config: ParserConfig = ParserConfig::new().element_close_use_default_wildcard_ident(true);
     let _ = Parser::new(config).parse_simple(tokens).unwrap();
 }
 

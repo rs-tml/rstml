@@ -114,6 +114,11 @@ impl ParseRecoverable for NodeDoctype {
 }
 
 impl OpenTag {
+    /// Parses the opening `<` of an open tag, providing handling of the
+    /// unexpected `</` of a close tag.
+    ///
+    /// **Note:** This is an internal function exported to make parsing of
+    /// custom nodes easier. It is not considered stable.
     pub fn parse_start_tag(
         parser: &mut RecoverableContext,
         input: ParseStream,
@@ -160,6 +165,13 @@ impl ParseRecoverable for OpenTag {
 }
 
 impl<C: CustomNode> NodeElement<C> {
+    /// Parses the children of a node, stopping at the first matching closing
+    /// tag, following the behavior specified in the [`ParserConfig`].
+    ///
+    /// **Note:** This is an internal function exported to make parsing of
+    /// custom nodes easier. It is not considered stable.
+    ///
+    /// [`ParserConfig`]: crate::ParserConfig
     pub fn parse_children(
         parser: &mut RecoverableContext,
         input: ParseStream,
@@ -213,7 +225,7 @@ impl<C: CustomNode> NodeElement<C> {
 
         if close_tag.name != open_tag.name {
             match parser.config().element_close_wildcard.as_deref() {
-                Some(is_wildcard) if is_wildcard(&open_tag, &close_tag) => {}
+                Some(is_wildcard) if is_wildcard(open_tag, &close_tag) => {}
                 _ => {
                     let diagnostic = Diagnostic::spanned(
                         close_tag.span(),
@@ -275,7 +287,7 @@ impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
 
 impl<C: CustomNode> ParseRecoverable for Node<C> {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
-        let node = if C::peek_element(input) {
+        let node = if C::peek_element(&input.fork()) {
             Node::Custom(C::parse_element(parser, input)?)
         } else if input.peek(Token![<]) {
             if input.peek2(Token![!]) {

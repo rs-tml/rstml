@@ -10,10 +10,9 @@
 //!
 //! Example:
 //! ```rust
-//!   # use std::convert::Infallible;
 //!   # use quote::quote;
 //!   # use rstml::{Parser, ParserConfig};
-//!   # Parser::new(ParserConfig::default()).parse_recoverable::<Infallible>(quote! {
+//!   # Parser::new(ParserConfig::default()).parse_recoverable(quote! {
 //!   <div hello={world.} /> // dot after world is invalid syn::Expr
 //!   <>
 //!       <div>"1"</x> // incorrect closed tag
@@ -220,8 +219,8 @@ impl<T> From<syn::Result<T>> for ParsingResult<T> {
     }
 }
 
-impl From<crate::ParserConfig> for RecoveryConfig {
-    fn from(config: ParserConfig) -> Self {
+impl<C> From<ParserConfig<C>> for RecoveryConfig {
+    fn from(config: ParserConfig<C>) -> Self {
         RecoveryConfig {
             recover_block: config.recover_block,
             raw_text_elements: config.raw_text_elements.clone(),

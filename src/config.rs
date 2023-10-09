@@ -1,19 +1,20 @@
-use std::{collections::HashSet, fmt::Debug, rc::Rc};
+use std::{collections::HashSet, convert::Infallible, fmt::Debug, marker::PhantomData, rc::Rc};
 
+use derive_where::derive_where;
 use proc_macro2::TokenStream;
 use syn::{parse::ParseStream, Result};
 
 use crate::{
     atoms::{CloseTag, OpenTag},
-    node::NodeType,
+    node::{CustomNode, NodeType},
 };
 
 pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
 pub type ElementWildcardFn = dyn Fn(&OpenTag, &CloseTag) -> bool;
 
 /// Configures the `Parser` behavior
-#[derive(Default, Clone)]
-pub struct ParserConfig {
+#[derive_where(Clone)]
+pub struct ParserConfig<C = Infallible> {
     pub(crate) flat_tree: bool,
     pub(crate) number_of_top_level_nodes: Option<usize>,
     pub(crate) type_of_top_level_nodes: Option<NodeType>,
@@ -22,9 +23,26 @@ pub struct ParserConfig {
     pub(crate) always_self_closed_elements: HashSet<&'static str>,
     pub(crate) raw_text_elements: HashSet<&'static str>,
     pub(crate) element_close_wildcard: Option<Rc<ElementWildcardFn>>,
+    custom_node: PhantomData<C>,
 }
 
-impl Debug for ParserConfig {
+impl Default for ParserConfig {
+    fn default() -> Self {
+        Self {
+            flat_tree: Default::default(),
+            number_of_top_level_nodes: Default::default(),
+            type_of_top_level_nodes: Default::default(),
+            transform_block: Default::default(),
+            recover_block: Default::default(),
+            always_self_closed_elements: Default::default(),
+            raw_text_elements: Default::default(),
+            element_close_wildcard: Default::default(),
+            custom_node: Default::default(),
+        }
+    }
+}
+
+impl<C> Debug for ParserConfig<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParserConfig")
             .field("flat_tree", &self.flat_tree)
@@ -49,7 +67,9 @@ impl ParserConfig {
     pub fn new() -> ParserConfig {
         ParserConfig::default()
     }
+}
 
+impl<C> ParserConfig<C> {
     /// Return flat tree instead of nested tree
     pub fn flat_tree(mut self) -> Self {
         self.flat_tree = true;
@@ -187,5 +207,21 @@ impl ParserConfig {
         self.element_close_wildcard(move |open_tag, close_tag| {
             close_tag.name.is_wildcard() && (!open_tag_should_be_block || open_tag.name.is_block())
         })
+    }
+
+    /// Enables parsing for [`Node::Custom`] using a type implementing
+    /// [`CustomNode`].
+    pub fn custom_node<CN: CustomNode>(self) -> ParserConfig<CN> {
+        ParserConfig {
+            flat_tree: self.flat_tree,
+            number_of_top_level_nodes: self.number_of_top_level_nodes,
+            type_of_top_level_nodes: self.type_of_top_level_nodes,
+            transform_block: self.transform_block,
+            recover_block: self.recover_block,
+            always_self_closed_elements: self.always_self_closed_elements,
+            raw_text_elements: self.raw_text_elements,
+            element_close_wildcard: self.element_close_wildcard,
+            custom_node: Default::default(),
+        }
     }
 }

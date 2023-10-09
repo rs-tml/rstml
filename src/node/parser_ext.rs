@@ -7,7 +7,15 @@ impl RecoverableContext {
     /// Like [`parse_simple`], but splits the tokenstream at `E` first only
     /// parsing the tokens before it as `T`.
     ///
+    /// **Note:** This is an internal function exported to make parsing of
+    /// custom nodes easier. It has some quirks, e.g.,
+    /// `parse_simple_with_ending<Expr, Token![>]>`, would not support any
+    /// [`Expr`] containing a `>`.
+    ///
+    /// It is not considered stable.
+    ///
     /// [`parse_simple`]: #method.parse_simple
+    /// [`Expr`]: https://docs.rs/syn/latest/syn/enum.Expr.html
     pub fn parse_simple_with_ending<T: Parse, E: Parse>(
         &mut self,
         input: ParseStream,
