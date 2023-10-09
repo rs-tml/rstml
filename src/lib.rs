@@ -176,10 +176,9 @@
 //! nodes that was parsed.
 //!
 //! ```rust
-//!   # use std::convert::Infallible;
 //!   # use quote::quote;
 //!   # use rstml::{Parser, ParserConfig};
-//!   # Parser::new(ParserConfig::default()).parse_recoverable::<Infallible>(quote! {
+//!   # Parser::new(ParserConfig::default()).parse_recoverable(quote! {
 //!  <div hello={world.} /> <!-- dot after world is invalid syn expression -->
 //!   <>
 //!       <div>"1"</x> <!-- incorrect closed tag -->
@@ -246,20 +245,6 @@ pub fn parse(tokens: proc_macro::TokenStream) -> Result<Vec<Node>> {
     Parser::new(ParserConfig::default()).parse_simple(tokens)
 }
 
-/// Parse the given [`proc-macro2::TokenStream`] or
-/// [`proc-macro::TokenStream`] into a [`Node`] tree with the [`CustomNode`]
-/// C.
-///
-/// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
-/// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
-/// [`CustomNode`]: trait.CustomNode.html
-/// [`Node`]: struct.Node.html
-pub fn parse_custom<C: CustomNode>(
-    tokens: impl Into<proc_macro2::TokenStream>,
-) -> Result<Vec<Node<C>>> {
-    Parser::new(ParserConfig::default()).parse_custom(tokens)
-}
-
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree with custom
 /// [`ParserConfig`].
 ///
@@ -267,10 +252,10 @@ pub fn parse_custom<C: CustomNode>(
 /// [`Node`]: struct.Node.html
 /// [`ParserConfig`]: struct.ParserConfig.html
 #[deprecated(since = "0.10.2", note = "use rstml::Parser::parse_simple instead")]
-pub fn parse_with_config(
+pub fn parse_with_config<C: CustomNode>(
     tokens: proc_macro::TokenStream,
-    config: ParserConfig,
-) -> Result<Vec<Node>> {
+    config: ParserConfig<C>,
+) -> Result<Vec<Node<C>>> {
     Parser::new(config).parse_simple(tokens)
 }
 /// Parse the given [`proc-macro2::TokenStream`] into a [`Node`] tree.
@@ -288,9 +273,9 @@ pub fn parse2(tokens: proc_macro2::TokenStream) -> Result<Vec<Node>> {
 /// [`Node`]: struct.Node.html
 /// [`ParserConfig`]: struct.ParserConfig.html
 #[deprecated(since = "0.10.2", note = "use rstml::Parser::parse_simple instead")]
-pub fn parse2_with_config(
+pub fn parse2_with_config<C: CustomNode>(
     tokens: proc_macro2::TokenStream,
-    config: ParserConfig,
-) -> Result<Vec<Node>> {
+    config: ParserConfig<C>,
+) -> Result<Vec<Node<C>>> {
     Parser::new(config).parse_simple(tokens)
 }

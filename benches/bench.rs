@@ -22,27 +22,29 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("rstml::parse2(simple)", |b| {
         b.iter(|| {
-            let config = rstml::ParserConfig::new().always_self_closed_elements(
-                vec![
-                    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
-                    "param", "source", "track", "wbr",
-                ]
-                .into_iter()
-                .collect(),
-            );
+            let config: rstml::ParserConfig = rstml::ParserConfig::new()
+                .always_self_closed_elements(
+                    vec![
+                        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+                        "param", "source", "track", "wbr",
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
             rstml::Parser::new(config).parse_simple(tokens.clone())
         })
     });
     c.bench_function("rstml::parse2(rust_site)", |b| {
         b.iter(|| {
-            let config = rstml::ParserConfig::new().always_self_closed_elements(
-                vec![
-                    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
-                    "param", "source", "track", "wbr",
-                ]
-                .into_iter()
-                .collect(),
-            );
+            let config: rstml::ParserConfig = rstml::ParserConfig::new()
+                .always_self_closed_elements(
+                    vec![
+                        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+                        "param", "source", "track", "wbr",
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
             rstml::Parser::new(config).parse_simple(tokens.clone())
         })
     });

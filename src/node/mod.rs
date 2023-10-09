@@ -203,8 +203,20 @@ fn path_to_string(expr: &ExprPath) -> String {
 }
 
 pub trait CustomNode: Sized {
+    /// Should correspond to [`ToTokens::to_tokens`].
+    ///
+    /// [`ToTokens::to_tokens`]: quote::ToTokens::to_tokens
     fn to_tokens(&self, tokens: &mut TokenStream);
+    /// Peeks the token stream to decide whether this node should be parsed.
+    ///
+    /// Recieves a [`ParseStream::fork`].
+    ///
+    /// [`ParseStream::fork`]: syn::parse::ParseBuffer::fork
     fn peek_element(input: ParseStream) -> bool;
+    /// Parses the custom node, only called when [`peek_element`] returns
+    /// `true`.
+    ///
+    /// [`peek_element`]: Self::peek_element
     fn parse_element(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self>;
 }
 
