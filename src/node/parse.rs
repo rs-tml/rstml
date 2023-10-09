@@ -75,7 +75,6 @@ impl ParseRecoverable for NodeFragment {
                 FragmentClose::parse_with_start_tag(parser, input, close_tag_start),
             )
         };
-        let tag_close = tag_close;
         let open_tag_end = tag_open.token_gt.span();
         let close_tag_start = tag_close.as_ref().map(|v| v.start_tag.token_lt.span());
 
