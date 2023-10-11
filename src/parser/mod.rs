@@ -52,7 +52,7 @@ impl<C: CustomNode> Parser<C> {
         let mut top_level_nodes = 0;
 
         let mut parser = RecoverableContext::new(self.config.clone().into());
-        while !input.cursor().eof() {
+        while !input.is_empty() {
             let Some(parsed_node) = Node::parse_recoverable(&mut parser, input) else {
                 parser.push_diagnostic(input.error("Node parse failed".to_string()));
                 break;
@@ -101,7 +101,11 @@ impl<C: CustomNode> Parser<C> {
 
         let errors = parser.diagnostics;
 
-        let nodes = if nodes.is_empty() { None } else { Some(nodes) };
+        let nodes = if nodes.is_empty() {
+            Some(vec![])
+        } else {
+            Some(nodes)
+        };
         ParsingResult::from_parts(nodes, errors)
     }
 }
