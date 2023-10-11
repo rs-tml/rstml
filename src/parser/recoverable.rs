@@ -160,14 +160,10 @@ pub enum ParsingResult<T> {
 impl<T> ParsingResult<T> {
     /// Create new ParsingResult from optional value and accumulated errors.
     pub fn from_parts(value: Option<T>, errors: Vec<Diagnostic>) -> Self {
-        if let Some(token) = value {
-            if errors.is_empty() {
-                Self::Ok(token)
-            } else {
-                Self::Partial(token, errors)
-            }
-        } else {
-            Self::Failed(errors)
+        match (value, errors) {
+            (Some(v), err) if err.is_empty() => Self::Ok(v),
+            (Some(v), err) => Self::Partial(v, err),
+            (None, err) => Self::Failed(err),
         }
     }
 
