@@ -235,7 +235,7 @@ impl<C> From<ParserConfig<C>> for RecoveryConfig {
 /// Panics:
 /// If [`ParseRecoverable`] implementation doesn't save any diagnostic message,
 /// and return [`None`].
-pub struct Recoverable<T>(T);
+pub struct Recoverable<T>(pub T);
 impl<T> Recoverable<T> {
     pub fn inner(self) -> T {
         self.0
