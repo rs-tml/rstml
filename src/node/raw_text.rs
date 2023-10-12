@@ -47,11 +47,11 @@ impl RawText {
     /// Internally uses `Span::source_text` and `Span::join`, so it can be not
     /// available.
     ///
-    /// Optionally including witespaces.
+    /// Optionally including whitespaces.
     /// Whitespaces can be recovered only if before and after `RawText` was
     /// other valid `Node`.
-    pub fn to_source_text(&self, with_witespaces: bool) -> Option<String> {
-        if with_witespaces {
+    pub fn to_source_text(&self, with_whitespaces: bool) -> Option<String> {
+        if with_whitespaces {
             let (start, end) = self.context_span?;
             let full = start.join(end)?;
             let full_text = full.source_text()?;
