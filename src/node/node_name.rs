@@ -24,11 +24,6 @@ pub enum NodeNameFragment {
     // In case when name contain more than one Punct in series
     Empty,
 }
-impl NodeNameFragment {
-    fn peek_any(input: ParseStream) -> bool {
-        input.peek(Ident::peek_any) || input.peek(LitInt)
-    }
-}
 
 impl PartialEq<NodeNameFragment> for NodeNameFragment {
     fn eq(&self, other: &NodeNameFragment) -> bool {
@@ -179,7 +174,7 @@ impl NodeName {
         let fork = &input.fork();
         let mut segments = Punctuated::<X, T>::new();
 
-        while !fork.is_empty() && NodeNameFragment::peek_any(fork) {
+        while !fork.is_empty() {
             let ident = NodeNameFragment::parse(fork)?;
             segments.push_value(ident.clone().into());
 
