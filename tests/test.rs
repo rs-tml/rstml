@@ -4,7 +4,9 @@ use eyre::Result;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use rstml::{
-    node::{KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement, NodeType},
+    node::{
+        KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement, NodeName, NodeType,
+    },
     parse2, Parser, ParserConfig,
 };
 use syn::{parse_quote, token::Colon, Block, LifetimeParam, Pat, PatType, Token, TypeParam};
@@ -883,6 +885,12 @@ fn test_empty_input() -> Result<()> {
     assert!(nodes.is_empty());
 
     Ok(())
+}
+
+#[test]
+fn test_consecutive_puncts_in_name() {
+    let name: NodeName = parse_quote! { a--::..d };
+    assert_eq!(name.to_string(), "a--::..d");
 }
 
 fn get_element(nodes: &[Node], element_index: usize) -> &NodeElement {
