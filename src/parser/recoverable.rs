@@ -118,6 +118,19 @@ impl RecoverableContext {
             }
         }
     }
+    /// Parse token using closure
+    pub fn parse_mixed_fn<F, T>(&mut self, input: ParseStream, mut parser: F) -> Option<T>
+    where
+        F: FnMut(&mut Self, ParseStream) -> Result<T, syn::Error>,
+    {
+        match parser(self, input) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                self.diagnostics.push(e.into());
+                None
+            }
+        }
+    }
 
     /// Parse token using [`ParseRecoverable`]
     pub fn parse_recoverable<T: ParseRecoverable>(&mut self, input: ParseStream) -> Option<T> {
