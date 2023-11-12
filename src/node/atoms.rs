@@ -43,7 +43,7 @@ pub(crate) mod tokens {
     //     //
     /// Start part of doctype tag
     /// `<!`
-    #[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
     pub struct DocStart {
         pub token_lt: Token![<],
         pub token_not: Token![!],
@@ -51,7 +51,7 @@ pub(crate) mod tokens {
 
     /// Start part of comment tag
     /// `<!--`
-    #[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
     pub struct ComStart {
         pub token_lt: Token![<],
         pub token_not: Token![!],
@@ -62,7 +62,7 @@ pub(crate) mod tokens {
 
     /// End part of comment tag
     /// `-->`
-    #[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
     pub struct ComEnd {
         #[parse(parse::parse_array_of2_tokens)]
         #[to_tokens(parse::to_tokens_array)]
@@ -72,7 +72,7 @@ pub(crate) mod tokens {
 
     /// End part of element's open tag
     /// `/>` or `>`
-    #[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
     pub struct OpenTagEnd {
         pub token_solidus: Option<Token![/]>,
         pub token_gt: Token![>],
@@ -81,7 +81,7 @@ pub(crate) mod tokens {
     /// Start part of element's close tag.
     /// Its commonly used as separator
     /// `</`
-    #[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
     pub struct CloseTagStart {
         pub token_lt: Token![<],
         pub token_solidus: Token![/],
@@ -92,7 +92,7 @@ pub use tokens::*;
 
 /// Fragment open part
 /// `<>`
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
 pub struct FragmentOpen {
     pub token_lt: Token![<],
     pub token_gt: Token![>],
@@ -100,7 +100,7 @@ pub struct FragmentOpen {
 
 /// Fragment close part
 /// `</>`
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
 pub struct FragmentClose {
     pub start_tag: tokens::CloseTagStart,
     pub token_gt: Token![>],

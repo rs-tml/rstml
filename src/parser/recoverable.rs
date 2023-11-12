@@ -38,7 +38,7 @@
 //! [`Parser::parse_recoverable`]: struct.Parser.html#method.parse_recoverable
 //! [`Node`]: struct.Node.html
 
-use std::{collections::HashSet, fmt::Debug, rc::Rc};
+use std::{backtrace, collections::HashSet, fmt::Debug, rc::Rc};
 
 use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::parse::{Parse, ParseStream};
@@ -141,6 +141,7 @@ impl RecoverableContext {
     /// and convert result to `Option`, that can be used directly
     /// as output in [`ParseRecoverable::parse_recoverable`]
     pub fn save_diagnostics<T>(&mut self, val: syn::Result<T>) -> Option<T> {
+        println!("{}", std::backtrace::Backtrace::capture().to_string());
         match val {
             Ok(v) => Some(v),
             Err(e) => {
@@ -153,7 +154,10 @@ impl RecoverableContext {
     /// Push custom message of [`syn::Error`] or
     /// [`proc_macro2_diagnostics::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
-        self.diagnostics.push(diagnostic.into());
+        let diag = diagnostic.into();
+
+        println!("{}", std::backtrace::Backtrace::capture().to_string());
+        self.diagnostics.push(dbg!(diag));
     }
 }
 
