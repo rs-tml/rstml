@@ -1,9 +1,10 @@
 use std::{collections::HashSet, convert::Infallible, fmt::Debug, marker::PhantomData, rc::Rc};
 
-use derive_where::derive_where;
 use proc_macro2::TokenStream;
 use syn::{parse::ParseStream, Result};
 
+#[cfg(feature = "rawtext-stable-hack")]
+use crate::rawtext_stable_hack::MacroPattern;
 use crate::{
     atoms::{CloseTag, OpenTag},
     node::{CustomNode, NodeType},
@@ -13,7 +14,6 @@ pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
 pub type ElementWildcardFn = dyn Fn(&OpenTag, &CloseTag) -> bool;
 
 /// Configures the `Parser` behavior
-#[derive_where(Clone)]
 pub struct ParserConfig<C = Infallible> {
     pub(crate) flat_tree: bool,
     pub(crate) number_of_top_level_nodes: Option<usize>,
@@ -23,7 +23,27 @@ pub struct ParserConfig<C = Infallible> {
     pub(crate) always_self_closed_elements: HashSet<&'static str>,
     pub(crate) raw_text_elements: HashSet<&'static str>,
     pub(crate) element_close_wildcard: Option<Rc<ElementWildcardFn>>,
+    #[cfg(feature = "rawtext-stable-hack")]
+    pub(crate) macro_pattern: MacroPattern,
     custom_node: PhantomData<C>,
+}
+
+impl<C> Clone for ParserConfig<C> {
+    fn clone(&self) -> Self {
+        Self {
+            flat_tree: self.flat_tree.clone(),
+            number_of_top_level_nodes: self.number_of_top_level_nodes,
+            type_of_top_level_nodes: self.type_of_top_level_nodes.clone(),
+            transform_block: self.transform_block.clone(),
+            recover_block: self.recover_block.clone(),
+            always_self_closed_elements: self.always_self_closed_elements.clone(),
+            raw_text_elements: self.raw_text_elements.clone(),
+            element_close_wildcard: self.element_close_wildcard.clone(),
+            #[cfg(feature = "rawtext-stable-hack")]
+            macro_pattern: self.macro_pattern.clone(),
+            custom_node: self.custom_node.clone(),
+        }
+    }
 }
 
 impl Default for ParserConfig {
@@ -37,6 +57,8 @@ impl Default for ParserConfig {
             always_self_closed_elements: Default::default(),
             raw_text_elements: Default::default(),
             element_close_wildcard: Default::default(),
+            #[cfg(feature = "rawtext-stable-hack")]
+            macro_pattern: Default::default(),
             custom_node: Default::default(),
         }
     }
@@ -44,8 +66,9 @@ impl Default for ParserConfig {
 
 impl<C> Debug for ParserConfig<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ParserConfig")
-            .field("flat_tree", &self.flat_tree)
+        let mut s = f.debug_struct("ParserConfig");
+
+        s.field("flat_tree", &self.flat_tree)
             .field("number_of_top_level_nodes", &self.number_of_top_level_nodes)
             .field("type_of_top_level_nodes", &self.type_of_top_level_nodes)
             .field("recover_block", &self.recover_block)
@@ -57,8 +80,10 @@ impl<C> Debug for ParserConfig<C> {
             .field(
                 "element_close_wildcard",
                 &self.element_close_wildcard.is_some(),
-            )
-            .finish()
+            );
+        #[cfg(feature = "rawtext-stable-hack")]
+        s.field("macro_pattern", &self.macro_pattern);
+        s.finish()
     }
 }
 
@@ -209,6 +234,48 @@ impl<C> ParserConfig<C> {
         })
     }
 
+    ///
+    /// Provide pattern of macro call.
+    ///
+    /// It is used with feature = "rawtext-stable-hack" to retrive
+    /// space information in `RawText`.
+    /// Checkout https://github.com/rs-tml/rstml/issues/5 for details.
+    ///
+    ///
+    /// This method receive macro pattern as `TokenStream`, uses tokens `%%`
+    /// as marker for input `rstml::parse`.
+    /// Support only one marker in pattern.
+    /// Currently, don't check other tokens for equality with pattern.
+    ///
+    /// Example:
+    ///
+    /// Imagine one have macro, that used like this:
+    /// ```
+    /// html! {some_context, provided, [ can use groups, etc], {<div>}, [other context]};
+    /// ```
+    ///
+    /// One can set `macro_call_pattern` like this:
+    /// ```
+    /// config.macro_call_pattern(quote!(html! // macro name currently is not checked
+    ///     {ident, ident, // can use real idents, or any other
+    ///         [/* can ignore context of auxilary groups */],
+    ///         {%%}, // important part
+    ///         []
+    ///     }))
+    /// ```
+    ///
+    /// Panics if no `%%` token was found.
+    ///
+    /// If macro_call_patern is set rstml will parse input two times in order to
+    /// recover spaces in `RawText`. Rstml will panic if macro source text
+    /// is not possible to recover.
+    #[cfg(feature = "rawtext-stable-hack")]
+    pub fn macro_call_pattern(mut self, pattern: TokenStream) -> Self {
+        self.macro_pattern =
+            MacroPattern::from_token_stream(pattern).expect("No %% token found in pattern.");
+        self
+    }
+
     /// Enables parsing for [`Node::Custom`] using a type implementing
     /// [`CustomNode`].
     pub fn custom_node<CN: CustomNode>(self) -> ParserConfig<CN> {
@@ -221,6 +288,8 @@ impl<C> ParserConfig<C> {
             always_self_closed_elements: self.always_self_closed_elements,
             raw_text_elements: self.raw_text_elements,
             element_close_wildcard: self.element_close_wildcard,
+            #[cfg(feature = "rawtext-stable-hack")]
+            macro_pattern: self.macro_pattern,
             custom_node: Default::default(),
         }
     }

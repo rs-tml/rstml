@@ -209,12 +209,35 @@ impl<T> ParsingResult<T> {
             Self::Partial(r, errors) => (Some(r), errors),
         }
     }
+
+    pub fn push_diagnostic(&mut self, diagnostic: Diagnostic) {
+        *self = match std::mem::replace(self, ParsingResult::Failed(vec![])) {
+            Self::Ok(r) => Self::Partial(r, vec![diagnostic]),
+            Self::Failed(errors) => {
+                Self::Failed(errors.into_iter().chain(Some(diagnostic)).collect())
+            }
+            Self::Partial(r, errors) => {
+                Self::Partial(r, errors.into_iter().chain(Some(diagnostic)).collect())
+            }
+        };
+    }
+
+    pub fn is_ok(&self) -> bool {
+        matches!(self, Self::Ok(_))
+    }
 }
 
 impl<T> ParsingResult<Vec<T>> {
     pub fn split_vec(self) -> (Vec<T>, Vec<Diagnostic>) {
         let (r, e) = self.split();
         (r.unwrap_or_default(), e)
+    }
+    pub fn from_parts_vec(value: Vec<T>, errors: Vec<Diagnostic>) -> Self {
+        match (value, errors) {
+            (v, err) if err.is_empty() => Self::Ok(v),
+            (v, err) if !v.is_empty() => Self::Partial(v, err),
+            (_, err) => Self::Failed(err),
+        }
     }
 }
 

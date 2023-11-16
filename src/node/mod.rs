@@ -202,7 +202,7 @@ fn path_to_string(expr: &ExprPath) -> String {
         .join("::")
 }
 
-pub trait CustomNode: Sized {
+pub trait CustomNode: Sized + std::fmt::Debug {
     /// Should correspond to [`ToTokens::to_tokens`].
     ///
     /// [`ToTokens::to_tokens`]: quote::ToTokens::to_tokens
