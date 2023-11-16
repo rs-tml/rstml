@@ -10,14 +10,11 @@ pub mod docs {
 }
 #[test]
 fn test() {
-    let nightly_unqoted = " Hello  world with spaces ";
-    let stable_unqoted = "Hello world with spaces";
-    assert_eq!(cfg!(rstml_signal_nightly), RawText::is_source_text_available());
-    let unquoted_text = if cfg!(rstml_signal_nightly) {
-        nightly_unqoted
-    } else {
-        stable_unqoted
-    };
+    let unquoted_text = " Hello  world with spaces ";
+    assert_eq!(
+        cfg!(rstml_signal_nightly),
+        RawText::is_source_text_available()
+    );
     let world = "planet";
     assert_eq!(
         html_ide! {

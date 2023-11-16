@@ -2,7 +2,7 @@
 name = "rstml"
 description = "Rust templating for XML-based formats (HTML, SVG, MathML) implemented on top of proc-macro::TokenStreams"
 version = "0.11.2"
-authors = ["vldm <me@vldm.cc>","stoically <stoically@protonmail.com>"]
+authors = ["vldm <me@vldm.cc>", "stoically <stoically@protonmail.com>"]
 keywords = ["syn", "jsx", "rsx", "html", "macro"]
 edition = "2018"
 repository = "https://github.com/rs-tml/rstml"
@@ -15,17 +15,16 @@ include = ["/src", "LICENSE"]
 bench = false
 
 [dependencies]
-proc-macro2 = "1.0.47"
+proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
 quote = "1.0.21"
 syn = { version = "2.0.15", features = ["full", "parsing", "extra-traits"] }
 thiserror = "1.0.37"
 syn_derive = "0.1.6"
 proc-macro2-diagnostics = { version = "0.10", default-features = false }
-derive-where = "1.2.5"
 
 [dev-dependencies]
-proc-macro2 = {version = "1.0.47", features = ["span-locations"]}
-criterion = "0.4.0"
+proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
+criterion = "0.5.1"
 eyre = "0.6.8"
 
 [[bench]]
@@ -34,10 +33,14 @@ harness = false
 path = "benches/bench.rs"
 
 [workspace]
-members = [
-    "examples/html-to-string-macro"
-]
+members = ["examples/html-to-string-macro"]
 
 [features]
 default = ["colors"]
+# Hack that parse input two times, using `proc-macro2::fallback` to recover spaces, and persist original spans.
+# It has no penalty in nightly, but in stable it parses input two times.
+# In order to use this feature, one should also set `ParserConfig::macro_call_pattern`.
+rawtext-stable-hack = ["rawtext-stable-hack-module"]
+# Export inters of rawtext_stable_hack. It is usefull if you need support of `UnquotedText` on stable but your macro is called from other one.
+rawtext-stable-hack-module = []
 colors = ["proc-macro2-diagnostics/colors"]

@@ -32,7 +32,9 @@ pub struct RawText<C: CustomNode = Infallible> {
     token_stream: TokenStream,
     // Span that started before previous token, and after next.
     context_span: Option<(Span, Span)>,
-    _c: PhantomData<C>
+    #[cfg(feature = "rawtext-stable-hack-module")]
+    recovered_text: Option<String>,
+    _c: PhantomData<C>,
 }
 
 impl<C: CustomNode> Default for RawText<C> {
@@ -40,7 +42,9 @@ impl<C: CustomNode> Default for RawText<C> {
         Self {
             token_stream: Default::default(),
             context_span: Default::default(),
-            _c: PhantomData
+            #[cfg(feature = "rawtext-stable-hack-module")]
+            recovered_text: Default::default(),
+            _c: PhantomData,
         }
     }
 }
@@ -118,13 +122,44 @@ impl<C: CustomNode> RawText<C> {
     }
 
     /// Trying to return best string representation available:
-    /// 1. calls `to_source_text(true)`
-    /// 2. calls `to_source_text(false)`
-    /// 3. as fallback calls `to_token_stream_string()`
+    /// 1. calls `to_source_text_hack()`.
+    /// 2. calls `to_source_text(true)`
+    /// 3. calls `to_source_text(false)`
+    /// 4. as fallback calls `to_token_stream_string()`
     pub fn to_string_best(&self) -> String {
+        #[cfg(feature = "rawtext-stable-hack-module")]
+        if let Some(recovered) = &self.recovered_text {
+            return recovered.clone();
+        }
         self.to_source_text(true)
             .or_else(|| self.to_source_text(false))
             .unwrap_or_else(|| self.to_token_stream_string())
+    }
+
+    // Returns text recovered using recover_space_hack.
+    // If feature "rawtext-stable-hack-module" wasn't activated returns None.
+    //
+    // Recovered text, tries to save whitespaces if possible.
+    pub fn to_source_text_hack(&self) -> Option<String> {
+        #[cfg(feature = "rawtext-stable-hack-module")]
+        {
+            return self.recovered_text.clone();
+        }
+        #[cfg(not(feature = "rawtext-stable-hack-module"))]
+        None
+    }
+
+    #[cfg(feature = "rawtext-stable-hack-module")]
+    pub(crate) fn recover_space(&mut self, other: &Self) {
+        self.recovered_text = Some(
+            other
+                .to_source_text(self.context_span.is_some())
+                .expect("Cannot recover space in this context"),
+        )
+    }
+    #[cfg(feature = "rawtext-stable-hack-module")]
+    pub(crate) fn init_recover_space(&mut self, init: String) {
+        self.recovered_text = Some(init)
     }
 }
 
@@ -139,8 +174,12 @@ impl RawText {
 impl<C: CustomNode> Parse for RawText<C> {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut token_stream = TokenStream::new();
-        let any_node =
-            |input: ParseStream| input.peek(Token![<]) || input.peek(Brace) || input.peek(LitStr) || C::peek_element(&input.fork());
+        let any_node = |input: ParseStream| {
+            input.peek(Token![<])
+                || input.peek(Brace)
+                || input.peek(LitStr)
+                || C::peek_element(&input.fork())
+        };
         // Parse any input until catching any node.
         // Fail only on eof.
         while !any_node(input) && !input.is_empty() {
@@ -149,6 +188,8 @@ impl<C: CustomNode> Parse for RawText<C> {
         Ok(Self {
             token_stream,
             context_span: None,
+            #[cfg(feature = "rawtext-stable-hack-module")]
+            recovered_text: None,
             _c: PhantomData,
         })
     }
@@ -165,6 +206,8 @@ impl<C: CustomNode> From<TokenStream> for RawText<C> {
         Self {
             token_stream,
             context_span: None,
+            #[cfg(feature = "rawtext-stable-hack-module")]
+            recovered_text: None,
             _c: PhantomData,
         }
     }

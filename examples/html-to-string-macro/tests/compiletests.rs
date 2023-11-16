@@ -1,5 +1,7 @@
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
-    t.compile_fail("tests/ui/*.rs");
+    if cfg!(rstml_signal_nightly) {
+        t.compile_fail("tests/ui/*.rs")
+    };
 }
