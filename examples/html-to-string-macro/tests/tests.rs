@@ -1,3 +1,4 @@
+use rstml::node::RawText;
 use rstml_to_string_macro::html_ide;
 
 // Using this parser, one can write docs and link html tags to them.
@@ -11,6 +12,7 @@ pub mod docs {
 fn test() {
     let nightly_unqoted = " Hello  world with spaces ";
     let stable_unqoted = "Hello world with spaces";
+    assert_eq!(cfg!(rstml_signal_nightly), RawText::is_source_text_available());
     let unquoted_text = if cfg!(rstml_signal_nightly) {
         nightly_unqoted
     } else {

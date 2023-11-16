@@ -64,7 +64,7 @@ pub enum Node<C: CustomNode = Infallible> {
     Element(NodeElement<C>),
     Block(NodeBlock),
     Text(NodeText),
-    RawText(RawText),
+    RawText(RawText<C>),
     Custom(C),
 }
 

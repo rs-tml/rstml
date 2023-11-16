@@ -38,7 +38,7 @@
 //! [`Parser::parse_recoverable`]: struct.Parser.html#method.parse_recoverable
 //! [`Node`]: struct.Node.html
 
-use std::{backtrace, collections::HashSet, fmt::Debug, rc::Rc};
+use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
 use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::parse::{Parse, ParseStream};
@@ -155,9 +155,7 @@ impl RecoverableContext {
     /// [`proc_macro2_diagnostics::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
         let diag = diagnostic.into();
-
-        println!("{}", std::backtrace::Backtrace::capture().to_string());
-        self.diagnostics.push(dbg!(diag));
+        self.diagnostics.push(diag);
     }
 }
 

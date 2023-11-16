@@ -5,11 +5,20 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use rstml::{
     node::{
-        KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement, NodeName, NodeType,
+        CustomNode, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement,
+        NodeName, NodeType,
     },
-    parse2, Parser, ParserConfig,
+    parse2,
+    recoverable::RecoverableContext,
+    Parser, ParserConfig,
 };
-use syn::{parse_quote, token::Colon, Block, LifetimeParam, Pat, PatType, Token, TypeParam};
+use syn::{
+    bracketed,
+    parse::ParseStream,
+    parse_quote,
+    token::{Bracket, Colon},
+    Block, LifetimeParam, Pat, PatType, Token, TypeParam,
+};
 
 #[test]
 fn test_single_empty_element() -> Result<()> {
@@ -74,6 +83,61 @@ fn test_single_element_with_unquoted_text_simple() -> Result<()> {
 }
 
 #[test]
+fn test_css_selector_unquoted_text() -> Result<()> {
+    let tokens = quote! {
+        // Note two spaces between bar and baz
+        --css-selector & with @strange + .puncts
+    };
+
+    let nodes = parse2(tokens)?;
+    let Node::RawText(child) = &nodes[0] else {
+        panic!("expected child")
+    };
+
+    // We can't use source text if token stream was created with quote!.
+    assert_eq!(
+        child.to_token_stream_string(),
+        "- - css - selector & with @ strange + . puncts"
+    );
+    assert_eq!(child.to_token_stream_string(), child.to_string_best());
+    Ok(())
+}
+
+#[test]
+fn test_css_selector_unquoted_text_string() -> Result<()> {
+    let tokens = TokenStream::from_str(
+        r#"
+        <style> --css-selector & with @strange + .puncts </style> 
+        "#,
+    )
+    .unwrap();
+
+    let nodes = parse2(tokens)?;
+    let Node::RawText(child) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected child")
+    };
+
+    // source text should be available
+    assert_eq!(
+        child.to_source_text(true).unwrap(),
+        " --css-selector & with @strange + .puncts "
+    );
+    assert_eq!(
+        child.to_source_text(false).unwrap(),
+        "--css-selector & with @strange + .puncts"
+    );
+
+    // without source text - it will return invalid css
+    assert_eq!(
+        child.to_token_stream_string(),
+        "-- css - selector & with @ strange + . puncts"
+    );
+    // When source is available, best should
+    assert_eq!(child.to_string_best(), child.to_source_text(true).unwrap());
+    Ok(())
+}
+
+#[test]
 fn test_single_element_with_unquoted_text_advance() -> Result<()> {
     let tokens = TokenStream::from_str(
         r#"
@@ -96,6 +160,34 @@ fn test_single_element_with_unquoted_text_advance() -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Debug)]
+struct TestCustomNode {
+    bracket: Bracket,
+    data: TokenStream,
+}
+
+impl CustomNode for TestCustomNode {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.bracket.surround(tokens, |c| self.data.to_tokens(c))
+    }
+
+    fn peek_element(input: ParseStream) -> bool {
+        input.peek(Bracket)
+    }
+
+    fn parse_element(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+        let inner_parser = |_parser: &mut RecoverableContext, input: ParseStream| {
+            let content;
+            let bracket = bracketed!(content in input);
+            Ok(Some(TestCustomNode {
+                bracket,
+                data: content.parse()?,
+            }))
+        };
+        parser.parse_mixed_fn(input, inner_parser)?
+    }
+}
+
 macro_rules! test_unquoted {
     ($($name:ident => $constructor: expr => Node::$getter:ident($bind:ident) => $check:expr ;)* )  => {
         $(
@@ -106,13 +198,12 @@ macro_rules! test_unquoted {
                     let tokens = TokenStream::from_str(
                         concat!("<foo> bar bar ", $constructor, " baz baz </foo>")
                     ).unwrap();
+                    let nodes = Parser::new(ParserConfig::default().custom_node::<TestCustomNode>()).parse_simple(tokens)?;
+                    let Node::RawText(child1) = get_element_child(&*nodes, 0, 0) else { panic!("expected unquoted child") };
 
-                    let nodes = parse2(tokens)?;
-                    let Node::RawText(child1) = get_element_child(&nodes, 0, 0) else { panic!("expected unquoted child") };
+                    let Node::$getter($bind) = get_element_child(&*nodes, 0, 1) else { panic!("expected matcher child") };
 
-                    let Node::$getter($bind) = get_element_child(&nodes, 0, 1) else { panic!("expected matcher child") };
-
-                    let Node::RawText(child3) = get_element_child(&nodes, 0, 2) else { panic!("expected unquoted child") };
+                    let Node::RawText(child3) = get_element_child(&*nodes, 0, 2) else { panic!("expected unquoted child") };
 
                     // source text should be available
                     assert_eq!(child1.to_source_text(true).unwrap(), " bar bar ");
@@ -166,7 +257,9 @@ test_unquoted!(
         assert!(child.close_tag.is_none());
     };
 
-
+    custom_node => "[bracketed text]" => Node::Custom(v) => {
+        assert_eq!(v.data.to_string(), "bracketed text");
+    };
 );
 
 #[test]
@@ -893,15 +986,15 @@ fn test_consecutive_puncts_in_name() {
     assert_eq!(name.to_string(), "a--::..d");
 }
 
-fn get_element(nodes: &[Node], element_index: usize) -> &NodeElement {
+fn get_element<C: CustomNode>(nodes: &[Node<C>], element_index: usize) -> &NodeElement<C> {
     let Some(Node::Element(element)) = nodes.get(element_index) else {
         panic!("expected element")
     };
     element
 }
 
-fn get_element_attribute(
-    nodes: &[Node],
+fn get_element_attribute<C: CustomNode>(
+    nodes: &[Node<C>],
     element_index: usize,
     attribute_index: usize,
 ) -> &KeyedAttribute {
@@ -916,7 +1009,11 @@ fn get_element_attribute(
     attribute
 }
 
-fn get_element_child(nodes: &[Node], element_index: usize, child_index: usize) -> &Node {
+fn get_element_child<C: CustomNode>(
+    nodes: &[Node<C>],
+    element_index: usize,
+    child_index: usize,
+) -> &Node<C> {
     let Some(Node::Element(element)) = nodes.get(element_index) else {
         panic!("expected element")
     };

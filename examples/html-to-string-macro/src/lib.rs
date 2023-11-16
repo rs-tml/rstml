@@ -8,7 +8,7 @@ use rstml::{
     Parser, ParserConfig,
 };
 use syn::spanned::Spanned;
-mod escape;
+// mod escape;
 #[derive(Default)]
 struct WalkNodesOutput<'a> {
     static_format: String,
