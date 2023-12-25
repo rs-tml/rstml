@@ -4,6 +4,7 @@ use std::{convert::Infallible, fmt};
 
 use atoms::{tokens, FragmentClose, FragmentOpen};
 use proc_macro2::{Ident, TokenStream};
+use quote::ToTokens;
 use syn::{parse::ParseStream, ExprPath, LitStr, Token};
 
 pub mod atoms;
@@ -19,6 +20,7 @@ pub use attribute::{
 };
 pub use node_name::{NodeName, NodeNameFragment};
 pub use node_value::NodeBlock;
+pub use node_value::InvalidBlock;
 
 pub use self::raw_text::RawText;
 use crate::recoverable::RecoverableContext;
@@ -56,8 +58,8 @@ impl fmt::Display for NodeType {
 }
 
 /// Node in the tree.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
-pub enum Node<C: CustomNode = Infallible> {
+#[derive(Clone, Debug)]
+pub enum Node<C = Infallible> {
     Comment(NodeComment),
     Doctype(NodeDoctype),
     Fragment(NodeFragment<C>),
@@ -66,6 +68,21 @@ pub enum Node<C: CustomNode = Infallible> {
     Text(NodeText),
     RawText(RawText<C>),
     Custom(C),
+}
+// Manual implementation, because derive macro doesn't support generics.
+impl<C: CustomNode> ToTokens for Node<C> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Comment(comment) => comment.to_tokens(tokens),
+            Self::Doctype(doctype) => doctype.to_tokens(tokens),
+            Self::Fragment(fragment) => fragment.to_tokens(tokens),
+            Self::Element(element) => element.to_tokens(tokens),
+            Self::Block(block) => block.to_tokens(tokens),
+            Self::Text(text) => text.to_tokens(tokens),
+            Self::RawText(raw_text) => raw_text.to_tokens(tokens),
+            Self::Custom(custom) => custom.to_tokens(tokens),
+        }
+    }
 }
 
 impl<C: CustomNode> Node<C> {
@@ -118,12 +135,23 @@ impl<C: CustomNode> Node<C> {
 ///
 /// A HTMLElement tag, with optional children and attributes.
 /// Potentially selfclosing. Any tag name is valid.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
-pub struct NodeElement<C: CustomNode = Infallible> {
+#[derive(Clone, Debug)]
+pub struct NodeElement<C> {
     pub open_tag: atoms::OpenTag,
-    #[to_tokens(parse::to_tokens_array)]
     pub children: Vec<Node<C>>,
     pub close_tag: Option<atoms::CloseTag>,
+}
+// Manual implementation, because derive macro doesn't support generics.
+impl<C: CustomNode> ToTokens for NodeElement<C> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.open_tag.to_tokens(tokens);
+        for child in &self.children {
+            child.to_tokens(tokens);
+        }
+        if let Some(close_tag) = &self.close_tag {
+            close_tag.to_tokens(tokens);
+        }
+    }
 }
 
 impl<C: CustomNode> NodeElement<C> {
@@ -132,6 +160,15 @@ impl<C: CustomNode> NodeElement<C> {
     }
     pub fn attributes(&self) -> &[NodeAttribute] {
         &self.open_tag.attributes
+    }
+    pub fn attributes_mut(&mut self) -> &mut Vec<NodeAttribute> {
+        &mut self.open_tag.attributes
+    }
+    pub fn chidlren(&self) -> &[Node<C>] {
+        &self.children
+    }
+    pub fn children_mut(&mut self) -> &mut Vec<Node<C>> {
+        &mut self.children
     }
 }
 
@@ -182,15 +219,35 @@ pub struct NodeDoctype {
 /// Fragement node.
 ///
 /// Fragment: `<></>`
-#[derive(Clone, Debug, syn_derive::ToTokens)]
-pub struct NodeFragment<C: CustomNode = Infallible> {
+#[derive(Clone, Debug)]
+pub struct NodeFragment<C> {
     /// Open fragment token
     pub tag_open: FragmentOpen,
     /// Children of the fragment node.
-    #[to_tokens(parse::to_tokens_array)]
     pub children: Vec<Node<C>>,
     /// Close fragment token
     pub tag_close: Option<FragmentClose>,
+}
+// Manual implementation, because derive macro doesn't support generics.
+impl<C:CustomNode> ToTokens for NodeFragment<C> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.tag_open.to_tokens(tokens);
+        for child in &self.children {
+            child.to_tokens(tokens);
+        }
+        if let Some(close_tag) = &self.tag_close {
+            close_tag.to_tokens(tokens);
+        }
+    }
+}
+
+impl<C> NodeFragment<C> {
+    pub fn children(&self) -> &[Node<C>] {
+        &self.children
+    }
+    pub fn children_mut(&mut self) -> &mut Vec<Node<C>> {
+        &mut self.children
+    }
 }
 
 fn path_to_string(expr: &ExprPath) -> String {

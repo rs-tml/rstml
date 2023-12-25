@@ -141,7 +141,6 @@ impl RecoverableContext {
     /// and convert result to `Option`, that can be used directly
     /// as output in [`ParseRecoverable::parse_recoverable`]
     pub fn save_diagnostics<T>(&mut self, val: syn::Result<T>) -> Option<T> {
-        println!("{}", std::backtrace::Backtrace::capture().to_string());
         match val {
             Ok(v) => Some(v),
             Err(e) => {

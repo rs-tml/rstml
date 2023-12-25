@@ -21,7 +21,7 @@ fn test() {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <title>"Example"</title>
+                <title>"Example"</title>
                 </head>
                 <body>
                     <!-- "comment" -->
