@@ -38,14 +38,7 @@ impl ParseRecoverable for NodeBlock {
             }
             Err(e) if parser.config().recover_block => {
                 parser.push_diagnostic(e);
-                let try_block = || {
-                    let content;
-                    Ok(NodeBlock::Invalid {
-                        brace: braced!(content in input),
-                        body: content.parse()?,
-                    })
-                };
-                parser.save_diagnostics(try_block())?
+                NodeBlock::Invalid(parser.parse_simple(input)?)
             }
             Err(e) => {
                 parser.push_diagnostic(e);

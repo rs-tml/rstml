@@ -1,16 +1,16 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, convert::Infallible};
 
 use proc_macro::TokenStream;
-use proc_macro2::{Literal, TokenTree};
 use quote::{quote, quote_spanned, ToTokens};
 use rstml::{
     node::{Node, NodeAttribute, NodeName},
+    visitor::{visit_attributes, visit_nodes, Visitor},
     Parser, ParserConfig,
 };
 use syn::spanned::Spanned;
 // mod escape;
 #[derive(Default)]
-struct WalkNodesOutput<'a> {
+struct WalkNodesOutput {
     static_format: String,
     // Use proc_macro2::TokenStream instead of syn::Expr
     // to provide more errors to the end user.
@@ -21,101 +21,143 @@ struct WalkNodesOutput<'a> {
     // No differences between open tag and closed tag.
     // Also multiple tags with same name can be present,
     // because we need to mark each of them.
-    collected_elements: Vec<&'a NodeName>,
+    collected_elements: Vec<NodeName>,
 }
-impl<'a> WalkNodesOutput<'a> {
-    fn extend(&mut self, other: WalkNodesOutput<'a>) {
+struct WalkNodes<'a> {
+    empty_elements: &'a HashSet<&'a str>,
+    output: WalkNodesOutput,
+}
+impl<'a> WalkNodes<'a> {
+    fn child_output(&self) -> Self {
+        Self {
+            empty_elements: self.empty_elements,
+            output: WalkNodesOutput::default(),
+        }
+    }
+}
+
+impl WalkNodesOutput {
+    fn extend(&mut self, other: WalkNodesOutput) {
         self.static_format.push_str(&other.static_format);
         self.values.extend(other.values);
         self.diagnostics.extend(other.diagnostics);
         self.collected_elements.extend(other.collected_elements);
     }
 }
+impl<'a> syn::visit_mut::VisitMut for WalkNodes<'a> {}
 
-fn walk_nodes<'a>(empty_elements: &HashSet<&str>, nodes: &'a Vec<Node>) -> WalkNodesOutput<'a> {
-    let mut out = WalkNodesOutput::default();
+impl<'a> Visitor for WalkNodes<'a> {
+    type Custom = Infallible;
 
-    for node in nodes {
-        match node {
-            Node::Doctype(doctype) => {
-                let value = &doctype.value.to_token_stream_string();
-                out.static_format.push_str(&format!("<!DOCTYPE {}>", value));
-            }
-            Node::Element(element) => {
-                let name = element.name().to_string();
-                out.static_format.push_str(&format!("<{}", name));
-                out.collected_elements.push(&element.open_tag.name);
-                if let Some(e) = &element.close_tag {
-                    out.collected_elements.push(&e.name)
-                }
-
-                // attributes
-                for attribute in element.attributes() {
-                    match attribute {
-                        NodeAttribute::Block(block) => {
-                            // If the nodes parent is an attribute we prefix with whitespace
-                            out.static_format.push(' ');
-                            out.static_format.push_str("{}");
-                            out.values.push(block.to_token_stream());
-                        }
-                        NodeAttribute::Attribute(attribute) => {
-                            out.static_format.push_str(&format!(" {}", attribute.key));
-                            if let Some(value) = attribute.value() {
-                                out.static_format.push_str(r#"="{}""#);
-                                out.values.push(value.to_token_stream());
-                            }
-                        }
-                    }
-                }
-                // Ignore childs of special Empty elements
-                if empty_elements.contains(element.open_tag.name.to_string().as_str()) {
-                    out.static_format
-                        .push_str(&format!("/</{}>", element.open_tag.name));
-                    if !element.children.is_empty() {
-                        let warning = proc_macro2_diagnostics::Diagnostic::spanned(
-                            element.open_tag.name.span(),
-                            proc_macro2_diagnostics::Level::Warning,
-                            "Element is processed as empty, and cannot have any child",
-                        );
-                        out.diagnostics.push(warning.emit_as_expr_tokens())
-                    }
-
-                    continue;
-                }
-                out.static_format.push('>');
-
-                // children
-                let other_output = walk_nodes(empty_elements, &element.children);
-                out.extend(other_output);
-                out.static_format.push_str(&format!("</{}>", name));
-            }
-            Node::Text(text) => {
-                out.static_format.push_str(&text.value_string());
-            }
-            Node::RawText(text) => {
-                out.static_format.push_str("{}");
-                let tokens = text.to_string_best();
-                let literal = Literal::string(&tokens);
-
-                out.values.push(TokenTree::from(literal).into());
-            }
-            Node::Fragment(fragment) => {
-                let other_output = walk_nodes(empty_elements, &fragment.children);
-                out.extend(other_output)
-            }
-            Node::Comment(comment) => {
-                out.static_format.push_str("<!-- {} -->");
-                out.values.push(comment.value.to_token_stream());
-            }
-            Node::Block(block) => {
-                out.static_format.push_str("{}");
-                out.values.push(block.to_token_stream());
-            }
-            Node::Custom(custom) => match *custom {},
-        }
+    fn visit_doctype(&mut self, doctype: &mut rstml::node::NodeDoctype) -> bool {
+        let value = &doctype.value.to_token_stream_string();
+        self.output
+            .static_format
+            .push_str(&format!("<!DOCTYPE {}>", value));
+        false
+    }
+    fn visit_text_node(&mut self, node: &mut rstml::node::NodeText) -> bool {
+        self.output.static_format.push_str(&node.value_string());
+        false
+    }
+    fn visit_raw_node<OtherC: rstml::node::CustomNode + Clone + std::fmt::Debug>(
+        &mut self,
+        node: &mut rstml::node::RawText<OtherC>,
+    ) -> bool {
+        self.output.static_format.push_str(&node.to_string_best());
+        false
+    }
+    fn visit_fragment(&mut self, fragment: &mut rstml::node::NodeFragment<Self::Custom>) -> bool {
+        let visitor = self.child_output();
+        let child_output = visit_nodes(&mut fragment.children, visitor);
+        self.output.extend(child_output.output);
+        false
     }
 
-    out
+    fn visit_comment(&mut self, comment: &mut rstml::node::NodeComment) -> bool {
+        self.output
+            .static_format
+            .push_str(&format!("<!-- {} -->", comment.value.value()));
+        false
+    }
+    fn visit_block(&mut self, block: &mut rstml::node::NodeBlock) -> bool {
+        self.output.static_format.push_str("{}");
+        self.output.values.push(block.to_token_stream());
+        false
+    }
+    fn visit_element(&mut self, element: &mut rstml::node::NodeElement<Self::Custom>) -> bool {
+        let name = element.name().to_string();
+        self.output.static_format.push_str(&format!("<{}", name));
+        self.output
+            .collected_elements
+            .push(element.open_tag.name.clone());
+        if let Some(e) = &element.close_tag {
+            self.output.collected_elements.push(e.name.clone())
+        }
+
+        let visitor = self.child_output();
+        let attribute_visitor = visit_attributes(element.attributes_mut(), visitor);
+        self.output.extend(attribute_visitor.output);
+
+        self.output.static_format.push('>');
+
+        // Ignore childs of special Empty elements
+        if self
+            .empty_elements
+            .contains(element.open_tag.name.to_string().as_str())
+        {
+            self.output
+                .static_format
+                .push_str(&format!("/</{}>", element.open_tag.name));
+            if !element.children.is_empty() {
+                let warning = proc_macro2_diagnostics::Diagnostic::spanned(
+                    element.open_tag.name.span(),
+                    proc_macro2_diagnostics::Level::Warning,
+                    "Element is processed as empty, and cannot have any child",
+                );
+                self.output.diagnostics.push(warning.emit_as_expr_tokens())
+            }
+
+            return false;
+        }
+        // children
+
+        let visitor = self.child_output();
+        let child_output = visit_nodes(&mut element.children, visitor);
+        self.output.extend(child_output.output);
+        self.output.static_format.push_str(&format!("</{}>", name));
+        false
+    }
+    fn visit_attribute(&mut self, attribute: &mut NodeAttribute) -> bool {
+        // attributes
+        match attribute {
+            NodeAttribute::Block(block) => {
+                // If the nodes parent is an attribute we prefix with whitespace
+                self.output.static_format.push(' ');
+                self.output.static_format.push_str("{}");
+                self.output.values.push(block.to_token_stream());
+            }
+            NodeAttribute::Attribute(attribute) => {
+                self.output
+                    .static_format
+                    .push_str(&format!(" {}", attribute.key));
+                if let Some(value) = attribute.value() {
+                    self.output.static_format.push_str(r#"="{}""#);
+                    self.output.values.push(value.to_token_stream());
+                }
+            }
+        }
+        false
+    }
+}
+fn walk_nodes<'a>(empty_elements: &'a HashSet<&'a str>, nodes: &'a mut [Node]) -> WalkNodesOutput {
+    let visitor = WalkNodes {
+        empty_elements,
+        output: WalkNodesOutput::default(),
+    };
+    let mut nodes = nodes.to_vec();
+    let output = visit_nodes(&mut nodes, visitor);
+    output.output
 }
 
 /// Converts HTML to `String`.
@@ -168,16 +210,16 @@ fn html_inner(tokens: TokenStream, ide_helper: bool) -> TokenStream {
         .macro_call_pattern(quote!(html! {%%}));
 
     let parser = Parser::new(config);
-    let (nodes, errors) = parser.parse_recoverable(tokens).split_vec();
+    let (mut nodes, errors) = parser.parse_recoverable(tokens).split_vec();
 
     let WalkNodesOutput {
         static_format: html_string,
         values,
         collected_elements: elements,
         diagnostics,
-    } = walk_nodes(&empty_elements, &nodes);
+    } = walk_nodes(&empty_elements, &mut nodes);
     let docs = if ide_helper {
-        generate_tags_docs(elements)
+        generate_tags_docs(&elements)
     } else {
         vec![]
     };
@@ -197,7 +239,7 @@ fn html_inner(tokens: TokenStream, ide_helper: bool) -> TokenStream {
     .into()
 }
 
-fn generate_tags_docs(elements: Vec<&NodeName>) -> Vec<proc_macro2::TokenStream> {
+fn generate_tags_docs(elements: &[NodeName]) -> Vec<proc_macro2::TokenStream> {
     // Mark some of elements as type,
     // and other as elements as fn in crate::docs,
     // to give an example how to link tag with docs.

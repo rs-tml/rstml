@@ -15,7 +15,6 @@ pub fn is_join_span_available() -> bool {
     // missing in this case.
     let source_text_available = Span::call_site()
         .source_text()
-        .map(|s| println!("{s}"))
         .is_some();
     join_call_span && source_text_available
 }

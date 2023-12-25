@@ -3,22 +3,27 @@
 use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
-use quote::ToTokens;
 use syn::{token::Brace, Block};
+
+#[derive(Clone, Debug, syn_derive::ToTokens, syn_derive::Parse)]
+pub struct InvalidBlock {
+    #[syn(braced)]
+    brace: Brace,
+    #[syn(in = brace)]
+    body: TokenStream,
+}
 
 /// Block node.
 ///
 /// Arbitrary rust code in braced `{}` blocks.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum NodeBlock {
     /// The block value..
     ValidBlock(Block),
 
-    Invalid {
-        brace: Brace,
-        body: TokenStream,
-    },
+    Invalid(InvalidBlock),
 }
+
 
 impl NodeBlock {
     ///
@@ -40,7 +45,7 @@ impl NodeBlock {
     pub fn try_block(&self) -> Option<&Block> {
         match self {
             Self::ValidBlock(b) => Some(b),
-            Self::Invalid { .. } => None,
+            Self::Invalid (_) => None,
         }
     }
 }
@@ -50,21 +55,10 @@ impl TryFrom<NodeBlock> for Block {
     fn try_from(v: NodeBlock) -> Result<Block, Self::Error> {
         match v {
             NodeBlock::ValidBlock(v) => Ok(v),
-            NodeBlock::Invalid { .. } => Err(syn::Error::new_spanned(
+            NodeBlock::Invalid (_) => Err(syn::Error::new_spanned(
                 v,
                 "Cant parse expression as block.",
             )),
-        }
-    }
-}
-
-impl ToTokens for NodeBlock {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            Self::Invalid { brace, body } => {
-                brace.surround(tokens, |tokens| body.to_tokens(tokens))
-            }
-            Self::ValidBlock(b) => b.to_tokens(tokens),
         }
     }
 }
