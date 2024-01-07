@@ -80,7 +80,7 @@ impl<C: CustomNode> Parser<C> {
         // return error, if macro source_text is not available.
         if !rawtext_stable_hack::is_macro_args_recoverable() {
             source.push_diagnostic(Diagnostic::new(
-                    proc_macro2_diagnostics::Level::Error,
+                    proc_macro2_diagnostics::Level::Warning,
                     "Failed to retrive source text of macro call, maybe macro was called from other macro?",
                 ));
             return source;

@@ -231,10 +231,10 @@ mod config;
 mod error;
 pub mod node;
 mod parser;
-pub mod visitor;
 #[doc(hidden)] // Currently its api is not planned to be stable.
 #[cfg(feature = "rawtext-stable-hack-module")]
 pub mod rawtext_stable_hack;
+pub mod visitor;
 pub use config::ParserConfig;
 pub use error::Error;
 pub use node::atoms;

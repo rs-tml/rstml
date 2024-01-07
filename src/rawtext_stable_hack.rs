@@ -13,9 +13,7 @@ pub fn is_join_span_available() -> bool {
 
     // Hack: Rust analyzer will return first span on join, but source_text is
     // missing in this case.
-    let source_text_available = Span::call_site()
-        .source_text()
-        .is_some();
+    let source_text_available = Span::call_site().source_text().is_some();
     join_call_span && source_text_available
 }
 

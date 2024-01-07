@@ -24,7 +24,6 @@ pub enum NodeBlock {
     Invalid(InvalidBlock),
 }
 
-
 impl NodeBlock {
     ///
     /// Returns syntactically valid `syn::Block` of Rust code.
@@ -45,7 +44,7 @@ impl NodeBlock {
     pub fn try_block(&self) -> Option<&Block> {
         match self {
             Self::ValidBlock(b) => Some(b),
-            Self::Invalid (_) => None,
+            Self::Invalid(_) => None,
         }
     }
 }
@@ -55,7 +54,7 @@ impl TryFrom<NodeBlock> for Block {
     fn try_from(v: NodeBlock) -> Result<Block, Self::Error> {
         match v {
             NodeBlock::ValidBlock(v) => Ok(v),
-            NodeBlock::Invalid (_) => Err(syn::Error::new_spanned(
+            NodeBlock::Invalid(_) => Err(syn::Error::new_spanned(
                 v,
                 "Cant parse expression as block.",
             )),

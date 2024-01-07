@@ -7,6 +7,7 @@ use rstml::{
     visitor::{visit_attributes, visit_nodes, Visitor},
     Parser, ParserConfig,
 };
+use rstml_controll_flow;
 use syn::spanned::Spanned;
 // mod escape;
 #[derive(Default)]

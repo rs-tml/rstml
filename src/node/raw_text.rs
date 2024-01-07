@@ -34,7 +34,7 @@ pub struct RawText<C = Infallible> {
     context_span: Option<(Span, Span)>,
     #[cfg(feature = "rawtext-stable-hack-module")]
     recovered_text: Option<String>,
-    // Use type parameter to make it possible to find custom nodes in the raw_node. 
+    // Use type parameter to make it possible to find custom nodes in the raw_node.
     _c: PhantomData<C>,
 }
 
@@ -117,7 +117,8 @@ impl<C> RawText<C> {
         close_tag_start: Option<Span>,
         mut children: Vec<Node<C>>,
     ) -> Vec<Node<C>>
-    where C: CustomNode
+    where
+        C: CustomNode,
     {
         let spans: Vec<Span> = Some(open_tag_end)
             .into_iter()

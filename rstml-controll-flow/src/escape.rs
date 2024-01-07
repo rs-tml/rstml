@@ -8,17 +8,14 @@
 //! of construction (part inside curly brackets) is expected to be an html(*ml),
 //! but condition is expected to be in rust syntax.
 
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt};
 use rstml::{
-    atoms::{self, OpenTag, OpenTagEnd},
-    node::{CustomNode, Node, NodeElement},
-    recoverable::{ParseRecoverable, Recoverable, RecoverableContext},
-    Parser, ParserConfig,
+    node::{CustomNode, Node},
+    recoverable::{ParseRecoverable, RecoverableContext},
 };
 use syn::{
     braced,
-    parse::{Parse, ParseStream, Peek},
-    parse_quote,
+    parse::{Parse, ParseStream},
     token::Brace,
     Expr, Pat, Token,
 };
@@ -98,7 +95,7 @@ impl ParseRecoverable for Else {
 /// As in rust can contain arbitrary amount of `else if .. {..}` constructs and
 /// one `else {..}`.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
-struct IfExpr {
+pub struct IfExpr {
     pub keyword: Token![if],
     pub condition: Expr,
     pub then_branch: Block,
@@ -136,7 +133,7 @@ impl ParseRecoverable for IfExpr {
 }
 
 #[derive(Debug, syn_derive::ToTokens)]
-struct ForExpr {
+pub struct ForExpr {
     pub keyword: Token![for],
     pub pat: Pat,
     pub token_in: Token![in],
@@ -166,7 +163,7 @@ impl ParseRecoverable for ForExpr {
 }
 
 #[derive(Debug, syn_derive::ToTokens)]
-struct Arm {
+pub struct Arm {
     pub pat: Pat,
     // pub guard: Option<(If, Box<Expr>)>,
     pub fat_arrow_token: Token![=>],
@@ -193,7 +190,7 @@ impl ParseRecoverable for Arm {
 // }
 
 #[derive(Debug, syn_derive::ToTokens)]
-struct MatchExpr {
+pub struct MatchExpr {
     pub keyword: Token![match],
     pub expr: Expr,
     #[syn(braced)]
@@ -236,7 +233,7 @@ impl ParseRecoverable for MatchExpr {
 // instead of `syn::Block` that contain valid rust code.
 
 #[derive(Debug, syn_derive::ToTokens)]
-enum EscapedExpr {
+pub enum EscapedExpr {
     If(IfExpr),
     For(ForExpr),
     Match(MatchExpr),
@@ -257,38 +254,15 @@ impl ParseRecoverable for EscapedExpr {
     }
 }
 
-impl EscapedExpr {
-    // Convert `Expr` to `syn::Expr`.
-    // Uses wrap closure to convert each `Block` to `syn::Block` .
-    //
-    // Usefull if one need to wrap inner `Node` array with macro call.
-    // Example:
-    // input: `macro!{<Foo>@if x > 1 {<Bar/>} </Foo>}`
-    // output:
-    // ```rust
-    //  let mut foo = Foo::new();
-    //  if x > 1 {
-    //      foo = foo.child(macro!{<Bar/>})
-    //  }
-    //  foo
-    // ```
-    pub fn into_wrapped_expr<F>(self, wrap: F) -> syn::Expr
-    where
-        F: Fn(Block) -> syn::Block,
-    {
-        todo!()
-    }
-}
-
 #[derive(Debug, syn_derive::ToTokens)]
-struct EscapeCode<T: ToTokens> {
+pub struct EscapeCode<T: ToTokens = Token![@]> {
     escape_token: T,
     expression: EscapedExpr,
 }
 
 impl<T> CustomNode for EscapeCode<T>
 where
-    T: Parse + ToTokens,
+    T: Parse + ToTokens + std::fmt::Debug,
     EscapeCode<T>: ToTokens,
 {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
@@ -299,10 +273,7 @@ where
         if input.parse::<T>().is_err() {
             return false;
         }
-        input.peek(Token![if]) ||
-        input.peek(Token![for]) ||
-        // input.peek(Token![while]) ||
-        input.peek(Token![match])
+        input.peek(Token![if]) || input.peek(Token![for]) || input.peek(Token![match])
     }
 
     fn parse_element(
@@ -325,8 +296,7 @@ mod test {
     use rstml::{node::Node, recoverable::Recoverable, Parser, ParserConfig};
     use syn::{parse_quote, Token};
 
-    use super::EscapeCode;
-    use crate::escape::EscapedExpr;
+    use super::{EscapeCode, EscapedExpr};
 
     type MyCustomNode = EscapeCode<Token![@]>;
     type MyNode = Node<MyCustomNode>;
