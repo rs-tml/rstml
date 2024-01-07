@@ -358,43 +358,48 @@ impl From<Infallible> for Conditions {
         unreachable!()
     }
 }
-impl CustomNode for Conditions {
+
+impl ToTokens for Conditions {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
             Self::ElseIf(else_if) => else_if.to_tokens(tokens),
             Self::Else(else_) => else_.to_tokens(tokens),
             Self::If(if_) => if_.to_tokens(tokens),
-            _ => {}
+            Self::For(for_) => for_.to_tokens(tokens),
         }
     }
+}
 
-    fn peek_element(input: syn::parse::ParseStream) -> bool {
-        input.peek(Token![<])
-            && (input.peek2(Token![else]) || input.peek2(Token![if]) || input.peek2(Token![for]))
-    }
-
-    fn parse_element(
+impl ParseRecoverable for Conditions {
+    fn parse_recoverable(
         parser: &mut rstml::recoverable::RecoverableContext,
-        input: syn::parse::ParseStream,
+        input: ParseStream,
     ) -> Option<Self> {
-        let variants = if input.peek2(Token![if]) {
+        let variants = if input.peek(Token![if]) {
             let if_ = IfNode::parse_recoverable(parser, input)?;
             Self::If(if_)
-        } else if input.peek2(Token![else]) {
-            if input.peek3(Token![if]) {
+        } else if input.peek(Token![else]) {
+            if input.peek2(Token![if]) {
                 let else_if = ElseIfNode::parse_recoverable(parser, input)?;
                 Self::ElseIf(else_if)
             } else {
                 let else_ = ElseNode::parse_recoverable(parser, input)?;
                 Self::Else(else_)
             }
-        } else if input.peek2(Token![for]) {
+        } else if input.peek(Token![for]) {
             let for_ = ForNode::parse_recoverable(parser, input)?;
             Self::For(for_)
         } else {
             return None;
         };
         Some(variants)
+    }
+}
+
+impl CustomNode for Conditions {
+    fn peek_element(input: syn::parse::ParseStream) -> bool {
+        input.peek(Token![<])
+            && (input.peek2(Token![else]) || input.peek2(Token![if]) || input.peek2(Token![for]))
     }
 }
 

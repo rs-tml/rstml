@@ -1,4 +1,4 @@
-use std::{collections::HashSet, convert::Infallible};
+use std::collections::HashSet;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
@@ -6,8 +6,8 @@ use rstml::{
     node::{Node, NodeAttribute, NodeName},
     visitor::{visit_attributes, visit_nodes, Visitor},
     Parser, ParserConfig,
+    Infallible,
 };
-use rstml_controll_flow;
 use syn::spanned::Spanned;
 // mod escape;
 #[derive(Default)]

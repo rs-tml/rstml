@@ -260,26 +260,8 @@ pub struct EscapeCode<T: ToTokens = Token![@]> {
     expression: EscapedExpr,
 }
 
-impl<T> CustomNode for EscapeCode<T>
-where
-    T: Parse + ToTokens + std::fmt::Debug,
-    EscapeCode<T>: ToTokens,
-{
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        ToTokens::to_tokens(&self, tokens)
-    }
-
-    fn peek_element(input: syn::parse::ParseStream) -> bool {
-        if input.parse::<T>().is_err() {
-            return false;
-        }
-        input.peek(Token![if]) || input.peek(Token![for]) || input.peek(Token![match])
-    }
-
-    fn parse_element(
-        parser: &mut rstml::recoverable::RecoverableContext,
-        input: syn::parse::ParseStream,
-    ) -> Option<Self> {
+impl<T: ToTokens + Parse> ParseRecoverable for EscapeCode<T> {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let escape_token = parser.parse_simple(input)?;
         let expression = parser.parse_recoverable(input)?;
 
@@ -288,6 +270,20 @@ where
             expression,
         })
     }
+}
+
+impl<T> CustomNode for EscapeCode<T>
+where
+    T: Parse + ToTokens
+{
+
+    fn peek_element(input: syn::parse::ParseStream) -> bool {
+        if input.parse::<T>().is_err() {
+            return false;
+        }
+        input.peek(Token![if]) || input.peek(Token![for]) || input.peek(Token![match])
+    }
+
 }
 
 #[cfg(test)]

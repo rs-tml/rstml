@@ -1,5 +1,6 @@
-use std::{convert::Infallible, fmt::Debug, marker::PhantomData};
+use std::{ fmt::Debug, marker::PhantomData};
 
+use crate::Infallible;
 use super::node::*;
 use crate::atoms::{CloseTag, OpenTag};
 
@@ -314,8 +315,8 @@ where
 }
 #[cfg(test)]
 mod tests {
-    use std::convert::Infallible;
 
+    use crate::Infallible;
     use quote::{quote, ToTokens};
 
     use super::*;

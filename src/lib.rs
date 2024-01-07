@@ -239,6 +239,7 @@ pub use config::ParserConfig;
 pub use error::Error;
 pub use node::atoms;
 use node::{CustomNode, Node};
+pub use node::Infallible;
 pub use parser::{recoverable, recoverable::ParsingResult, Parser};
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree.
@@ -256,7 +257,7 @@ pub fn parse(tokens: proc_macro::TokenStream) -> Result<Vec<Node>> {
 /// [`Node`]: struct.Node.html
 /// [`ParserConfig`]: struct.ParserConfig.html
 #[deprecated(since = "0.10.2", note = "use rstml::Parser::parse_simple instead")]
-pub fn parse_with_config<C: CustomNode>(
+pub fn parse_with_config<C: CustomNode + std::fmt::Debug>(
     tokens: proc_macro::TokenStream,
     config: ParserConfig<C>,
 ) -> Result<Vec<Node<C>>> {
@@ -277,7 +278,7 @@ pub fn parse2(tokens: proc_macro2::TokenStream) -> Result<Vec<Node>> {
 /// [`Node`]: struct.Node.html
 /// [`ParserConfig`]: struct.ParserConfig.html
 #[deprecated(since = "0.10.2", note = "use rstml::Parser::parse_simple instead")]
-pub fn parse2_with_config<C: CustomNode>(
+pub fn parse2_with_config<C: CustomNode + std::fmt::Debug>(
     tokens: proc_macro2::TokenStream,
     config: ParserConfig<C>,
 ) -> Result<Vec<Node<C>>> {

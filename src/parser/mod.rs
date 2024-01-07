@@ -25,7 +25,7 @@ pub struct Parser<C> {
     config: ParserConfig<C>,
 }
 
-impl<C: CustomNode> Parser<C> {
+impl<C: CustomNode + std::fmt::Debug> Parser<C> {
     /// Create a new parser with the given [`ParserConfig`].
     pub fn new(config: ParserConfig<C>) -> Self {
         Parser { config }

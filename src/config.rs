@@ -1,4 +1,4 @@
-use std::{collections::HashSet, convert::Infallible, fmt::Debug, marker::PhantomData, rc::Rc};
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData, rc::Rc};
 
 use proc_macro2::TokenStream;
 use syn::{parse::ParseStream, Result};
@@ -9,6 +9,7 @@ use crate::{
     atoms::{CloseTag, OpenTag},
     node::{CustomNode, NodeType},
 };
+use crate::Infallible;
 
 pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
 pub type ElementWildcardFn = dyn Fn(&OpenTag, &CloseTag) -> bool;

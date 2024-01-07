@@ -1,6 +1,6 @@
 //! Tree of nodes.
 
-use std::{convert::Infallible, fmt};
+use std::{convert, fmt};
 
 use atoms::{tokens, FragmentClose, FragmentOpen};
 use proc_macro2::{Ident, TokenStream};
@@ -22,7 +22,7 @@ pub use node_name::{NodeName, NodeNameFragment};
 pub use node_value::{InvalidBlock, NodeBlock};
 
 pub use self::raw_text::RawText;
-use crate::recoverable::RecoverableContext;
+use crate::recoverable::{RecoverableContext, ParseRecoverable};
 
 /// Node types.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -258,34 +258,38 @@ fn path_to_string(expr: &ExprPath) -> String {
         .join("::")
 }
 
-pub trait CustomNode: Sized + std::fmt::Debug {
-    /// Should correspond to [`ToTokens::to_tokens`].
-    ///
-    /// [`ToTokens::to_tokens`]: quote::ToTokens::to_tokens
-    fn to_tokens(&self, tokens: &mut TokenStream);
+pub trait CustomNode: ParseRecoverable + ToTokens {
     /// Peeks the token stream to decide whether this node should be parsed.
     ///
     /// Recieves a [`ParseStream::fork`].
     ///
     /// [`ParseStream::fork`]: syn::parse::ParseBuffer::fork
+    /// 
     fn peek_element(input: ParseStream) -> bool;
-    /// Parses the custom node, only called when [`peek_element`] returns
-    /// `true`.
-    ///
-    /// [`peek_element`]: Self::peek_element
-    fn parse_element(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self>;
 }
 
-impl CustomNode for Infallible {
+/// Newtype for `std::convert::Infallible` used to implement
+/// `ToTokens`` for `Infallible``.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Infallible (convert::Infallible);
+
+impl From<convert::Infallible> for Infallible {
+    fn from(s: convert::Infallible) -> Self {
+        match s {}
+    }
+}
+impl ToTokens for Infallible {
     fn to_tokens(&self, _tokens: &mut TokenStream) {
-        match *self {}
+        match self.0 {}
     }
-
-    fn peek_element(_input: ParseStream) -> bool {
-        false
-    }
-
-    fn parse_element(_parser: &mut RecoverableContext, _input: ParseStream) -> Option<Self> {
+}
+impl ParseRecoverable for Infallible {
+    fn parse_recoverable(_: &mut RecoverableContext, _: ParseStream) -> Option<Self> {
         unreachable!("Infallible::peek_element returns false")
+    }
+}
+impl CustomNode for Infallible {
+    fn peek_element( _: ParseStream) -> bool {
+        false
     }
 }

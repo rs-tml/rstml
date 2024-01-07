@@ -1,8 +1,8 @@
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{quote, TokenStreamExt};
 use rstml::{
     atoms::{self, OpenTag, OpenTagEnd},
     node::{CustomNode, Node, NodeElement},
-    recoverable::Recoverable,
+    recoverable::{Recoverable, ParseRecoverable},
     Parser, ParserConfig,
 };
 use syn::{parse_quote, Expr, Token};
@@ -17,17 +17,8 @@ struct If {
     body: Vec<Node>,
     close_tag: Option<atoms::CloseTag>,
 }
-
-impl CustomNode for If {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        ToTokens::to_tokens(&self, tokens)
-    }
-
-    fn peek_element(input: syn::parse::ParseStream) -> bool {
-        input.peek(Token![<]) && input.peek2(Token![if])
-    }
-
-    fn parse_element(
+impl ParseRecoverable for If {
+    fn parse_recoverable(
         parser: &mut rstml::recoverable::RecoverableContext,
         input: syn::parse::ParseStream,
     ) -> Option<Self> {
@@ -59,6 +50,12 @@ impl CustomNode for If {
             body,
             close_tag,
         })
+    }
+}
+
+impl CustomNode for If {
+    fn peek_element(input: syn::parse::ParseStream) -> bool {
+        input.peek(Token![<]) && input.peek2(Token![if])
     }
 }
 

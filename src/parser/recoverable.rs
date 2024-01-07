@@ -45,14 +45,14 @@ use syn::parse::{Parse, ParseStream};
 
 use crate::{
     config::{ElementWildcardFn, TransformBlockFn},
-    ParserConfig,
+    ParserConfig, node::CustomNode,
 };
 
 /// Config of parser.
 /// Used to extend parsing functionality by user needs.
 ///
 /// Can't be created directly, instead use [`From<ParserConfig>::from`].
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct RecoveryConfig {
     ///
     /// Try to parse invalid syn::Block as something.
@@ -67,6 +67,16 @@ pub struct RecoveryConfig {
     /// Allows wildcard closing tag matching for blocks
     pub(crate) element_close_wildcard: Option<Rc<ElementWildcardFn>>,
 }
+impl PartialEq for RecoveryConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.recover_block == other.recover_block
+            && self.always_self_closed_elements == other.always_self_closed_elements
+            && self.raw_text_elements == other.raw_text_elements
+            && self.transform_block.is_some() == other.transform_block.is_some()
+            && self.element_close_wildcard.is_some() == other.element_close_wildcard.is_some()
+    }
+}
+impl Eq for RecoveryConfig {}
 
 impl Debug for RecoveryConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -89,11 +99,26 @@ impl Debug for RecoveryConfig {
 /// Used to save [`Diagnostic`] messages or [`syn::Result`].
 ///
 /// Also can be extended with user needs through [`RecoveryConfig`].
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RecoverableContext {
     pub(super) diagnostics: Vec<Diagnostic>,
     config: RecoveryConfig,
 }
+
+impl PartialEq for RecoverableContext {
+    fn eq(&self, other: &Self) -> bool {
+        if self.diagnostics.len() != other.diagnostics.len() || self.config != other.config {
+            return false
+        }
+
+        self.diagnostics
+            .iter()
+            .zip(other.diagnostics.iter())
+            .all(|(a, b)| format!("{:?}",a) == format!("{:?}",b))
+    }
+}
+impl Eq for RecoverableContext {}
+
 impl RecoverableContext {
     pub fn new(config: RecoveryConfig) -> Self {
         Self {
@@ -275,7 +300,7 @@ impl<T> From<syn::Result<T>> for ParsingResult<T> {
     }
 }
 
-impl<C> From<ParserConfig<C>> for RecoveryConfig {
+impl<C: CustomNode> From<ParserConfig<C>> for RecoveryConfig {
     fn from(config: ParserConfig<C>) -> Self {
         RecoveryConfig {
             recover_block: config.recover_block,
