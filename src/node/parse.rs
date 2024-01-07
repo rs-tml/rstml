@@ -1,7 +1,7 @@
 //!
 //! Implementation of ToTokens and Spanned for node related structs
 
-use proc_macro2::{extra::DelimSpan, Delimiter, TokenStream, TokenTree};
+use proc_macro2::{extra::DelimSpan, Delimiter, TokenStream};
 use proc_macro2_diagnostics::{Diagnostic, Level};
 use quote::ToTokens;
 use syn::{
@@ -284,7 +284,7 @@ impl<C: CustomNode> ParseRecoverable for NodeElement<C> {
 impl<C: CustomNode> ParseRecoverable for Node<C> {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let node = if C::peek_element(&input.fork()) {
-            Node::Custom(C::parse_element(parser, input)?)
+            Node::Custom(C::parse_recoverable(parser, input)?)
         } else if input.peek(Token![<]) {
             if input.peek2(Token![!]) {
                 if input.peek3(Ident) {
@@ -303,7 +303,7 @@ impl<C: CustomNode> ParseRecoverable for Node<C> {
             Node::Text(parser.parse_simple(input)?)
         } else if !input.is_empty() {
             // Parse any input except of any other Node starting
-            Node::RawText(parser.parse_simple(input)?)
+            Node::RawText(parser.parse_recoverable(input)?)
         } else {
             return None;
         };

@@ -9,7 +9,7 @@ use rstml::{
         NodeName, NodeType,
     },
     parse2,
-    recoverable::RecoverableContext,
+    recoverable::{RecoverableContext, ParseRecoverable},
     Parser, ParserConfig,
 };
 use syn::{
@@ -166,16 +166,15 @@ struct TestCustomNode {
     data: TokenStream,
 }
 
-impl CustomNode for TestCustomNode {
+
+impl ToTokens for TestCustomNode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.bracket.surround(tokens, |c| self.data.to_tokens(c))
     }
+}
 
-    fn peek_element(input: ParseStream) -> bool {
-        input.peek(Bracket)
-    }
-
-    fn parse_element(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+impl ParseRecoverable for TestCustomNode {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let inner_parser = |_parser: &mut RecoverableContext, input: ParseStream| {
             let content;
             let bracket = bracketed!(content in input);
@@ -186,6 +185,13 @@ impl CustomNode for TestCustomNode {
         };
         parser.parse_mixed_fn(input, inner_parser)?
     }
+}
+
+impl CustomNode for TestCustomNode {
+    fn peek_element(input: ParseStream) -> bool {
+        input.peek(Bracket)
+    }
+
 }
 
 macro_rules! test_unquoted {
