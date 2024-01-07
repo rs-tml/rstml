@@ -19,8 +19,7 @@ pub use attribute::{
     AttributeValueExpr, FnBinding, KeyedAttribute, KeyedAttributeValue, NodeAttribute,
 };
 pub use node_name::{NodeName, NodeNameFragment};
-pub use node_value::NodeBlock;
-pub use node_value::InvalidBlock;
+pub use node_value::{InvalidBlock, NodeBlock};
 
 pub use self::raw_text::RawText;
 use crate::recoverable::RecoverableContext;
@@ -229,7 +228,7 @@ pub struct NodeFragment<C> {
     pub tag_close: Option<FragmentClose>,
 }
 // Manual implementation, because derive macro doesn't support generics.
-impl<C:CustomNode> ToTokens for NodeFragment<C> {
+impl<C: CustomNode> ToTokens for NodeFragment<C> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.tag_open.to_tokens(tokens);
         for child in &self.children {

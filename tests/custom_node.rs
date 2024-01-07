@@ -33,7 +33,7 @@ impl CustomNode for If {
     ) -> Option<Self> {
         let token_lt = OpenTag::parse_start_tag(parser, input)?;
         let token_if = parser.parse_simple(input)?;
-        let (condition, open_tag_end): (_, OpenTagEnd) = parser.parse_simple_with_ending(input)?;
+        let (condition, open_tag_end): (_, OpenTagEnd) = parser.parse_simple_until(input)?;
         let (body, close_tag) = if open_tag_end.token_solidus.is_none() {
             // Passed to allow parsing of close_tag
             NodeElement::parse_children(

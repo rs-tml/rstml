@@ -21,6 +21,8 @@ rstml = { version = "0.11.0", path = "../../", features = [
     "rawtext-stable-hack",
 ] }
 proc-macro2-diagnostics = "0.10"
+derive-where = "1.2.5"
+rstml-controll-flow = { version = "0.1.0", path = "../../rstml-controll-flow" }
 
 [dev-dependencies]
 trybuild = "1.0"

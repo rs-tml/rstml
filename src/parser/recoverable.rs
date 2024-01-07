@@ -144,7 +144,13 @@ impl RecoverableContext {
         match val {
             Ok(v) => Some(v),
             Err(e) => {
-                self.diagnostics.push(e.into());
+                let diag = e.into();
+                // println!(
+                //     "save diagnostic {:?}, backtrace={}",
+                //     diag,
+                //     std::backtrace::Backtrace::capture()
+                // );
+                self.diagnostics.push(diag);
                 None
             }
         }
@@ -154,6 +160,11 @@ impl RecoverableContext {
     /// [`proc_macro2_diagnostics::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
         let diag = diagnostic.into();
+        // println!(
+        //     "Push diagnostic: {:?}, backtrace={}",
+        //     diag,
+        //     std::backtrace::Backtrace::capture()
+        // );
         self.diagnostics.push(diag);
     }
 }
@@ -183,12 +194,13 @@ impl<T> ParsingResult<T> {
 
     ///
     /// Convert into [`syn::Result`], with fail on first diagnostic message,
+    /// Ignores any diagnostic non error message when result is available.
     /// Returns Error on [`ParsingResult::Failed`], and
     /// [`ParsingResult::Partial`].
     pub fn into_result(self) -> syn::Result<T> {
         match self {
             ParsingResult::Ok(r) => Ok(r),
-            ParsingResult::Failed(errors) | ParsingResult::Partial(_, errors) => Err(errors
+            ParsingResult::Failed(errors) => Err(errors
                 .into_iter()
                 .next()
                 .unwrap_or_else(|| {
@@ -198,6 +210,17 @@ impl<T> ParsingResult<T> {
                     )
                 })
                 .into()),
+            ParsingResult::Partial(ok, errors) => {
+                if let Some(err) = errors
+                    .into_iter()
+                    .filter(|p| p.level() == Level::Error)
+                    .next()
+                {
+                    Err(err.into())
+                } else {
+                    Ok(ok)
+                }
+            }
         }
     }
 

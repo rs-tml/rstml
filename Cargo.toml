@@ -33,7 +33,7 @@ harness = false
 path = "benches/bench.rs"
 
 [workspace]
-members = ["examples/html-to-string-macro"]
+members = ["examples/html-to-string-macro", "rstml-controll-flow"]
 
 [features]
 default = ["colors"]
