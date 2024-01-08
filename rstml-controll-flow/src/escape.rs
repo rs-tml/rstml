@@ -12,20 +12,25 @@ use quote::{ToTokens, TokenStreamExt};
 use rstml::{
     node::{CustomNode, Node as RNode},
     recoverable::{ParseRecoverable, RecoverableContext},
+    visitor::Visitor,
 };
 use syn::{
     braced,
     parse::{Parse, ParseStream},
     token::Brace,
+    visit_mut::VisitMut,
     Expr, Pat, Token,
 };
 
+use crate::{Either, TryIntoOrCloneRef};
 
 #[cfg(not(feature = "extendable"))]
-type Node = RNode<EscapeCode>;
+type CustomNodeType = EscapeCode;
 
 #[cfg(feature = "extendable")]
-type Node = RNode<crate::ExtendableCustomNode>;
+type CustomNodeType = crate::ExtendableCustomNode;
+
+type Node = RNode<CustomNodeType>;
 
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct Block {
@@ -63,6 +68,7 @@ pub struct ElseIf {
     pub condition: Expr,
     pub then_branch: Block,
 }
+
 impl ParseRecoverable for ElseIf {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         Some(ElseIf {
@@ -81,7 +87,6 @@ pub struct Else {
     pub else_token: Token![else],
     pub then_branch: Block,
 }
-
 impl ParseRecoverable for Else {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         Some(Else {
@@ -245,6 +250,7 @@ pub enum EscapedExpr {
     For(ForExpr),
     Match(MatchExpr),
 }
+
 impl ParseRecoverable for EscapedExpr {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let res = if input.peek(Token![if]) {
@@ -258,6 +264,19 @@ impl ParseRecoverable for EscapedExpr {
         };
 
         Some(res)
+    }
+}
+#[cfg(feature = "extendable")]
+impl TryIntoOrCloneRef<EscapeCode> for crate::ExtendableCustomNode {
+    fn try_into_or_clone_ref(self) -> Either<EscapeCode, Self> {
+        if let Some(val) = self.try_downcast_ref::<EscapeCode>() {
+            Either::A(val.clone())
+        } else {
+            Either::B(self.clone())
+        }
+    }
+    fn new_from_value(value: EscapeCode) -> Self {
+        Self::from_value(value)
     }
 }
 
@@ -281,16 +300,122 @@ impl<T: ToTokens + Parse> ParseRecoverable for EscapeCode<T> {
 
 impl<T> CustomNode for EscapeCode<T>
 where
-    T: Parse + ToTokens
+    T: Parse + ToTokens,
 {
-
     fn peek_element(input: syn::parse::ParseStream) -> bool {
         if input.parse::<T>().is_err() {
             return false;
         }
         input.peek(Token![if]) || input.peek(Token![for]) || input.peek(Token![match])
     }
+}
 
+pub mod visitor_impl {
+    use super::*;
+
+    impl Block {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            block: &mut Self,
+        ) -> bool {
+            block.body.iter_mut().all(|val| visitor.visit_node(val))
+        }
+    }
+
+    impl ElseIf {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            visitor.visit_expr_mut(&mut expr.condition);
+            Block::visit_custom_children(visitor, &mut expr.then_branch)
+        }
+    }
+
+    impl Else {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            Block::visit_custom_children(visitor, &mut expr.then_branch)
+        }
+    }
+
+    impl IfExpr {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            visitor.visit_expr_mut(&mut expr.condition);
+            Block::visit_custom_children(visitor, &mut expr.then_branch)
+                || expr
+                    .else_ifs
+                    .iter_mut()
+                    .all(|val| ElseIf::visit_custom_children(visitor, val))
+                || expr
+                    .else_branch
+                    .as_mut()
+                    .map(|val| Else::visit_custom_children(visitor, val))
+                    .unwrap_or(true)
+        }
+    }
+    impl ForExpr {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            visitor.visit_pat_mut(&mut expr.pat);
+            visitor.visit_expr_mut(&mut expr.expr);
+            Block::visit_custom_children(visitor, &mut expr.block)
+        }
+    }
+    impl Arm {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            visitor.visit_pat_mut(&mut expr.pat);
+            Block::visit_custom_children(visitor, &mut expr.body)
+        }
+    }
+    impl MatchExpr {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            visitor.visit_expr_mut(&mut expr.expr);
+
+            expr.arms
+                .iter_mut()
+                .all(|val| Arm::visit_custom_children(visitor, val))
+        }
+    }
+    impl EscapedExpr {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            expr: &mut Self,
+        ) -> bool {
+            match expr {
+                EscapedExpr::If(expr) => IfExpr::visit_custom_children(visitor, expr),
+                EscapedExpr::For(expr) => ForExpr::visit_custom_children(visitor, expr),
+                EscapedExpr::Match(expr) => MatchExpr::visit_custom_children(visitor, expr),
+            }
+        }
+    }
+    impl EscapeCode {
+        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+            visitor: &mut V,
+            node: &mut CustomNodeType,
+        ) -> bool {
+            let Either::A(mut this): Either<EscapeCode, _> = node.clone().try_into_or_clone_ref()
+            else {
+                return true;
+            };
+            let result = EscapedExpr::visit_custom_children(visitor, &mut this.expression);
+            *node = TryIntoOrCloneRef::new_from_value(this);
+            result
+        }
+    }
 }
 
 #[cfg(test)]
@@ -503,9 +628,8 @@ mod test {
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
     }
 
-
     #[test]
-    fn check_if_inside_if () {
+    fn check_if_inside_if() {
         let actual: Recoverable<MyNode> = parse_quote! {
             @if just && an || expression {
                 @if foo > bar {
@@ -523,9 +647,7 @@ mod test {
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
         let node = expr.then_branch.body.iter().next().unwrap();
-        let Node::Custom(actual) = node else {
-            panic!()
-        };
+        let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::If(expr) = &actual.expression else {
             panic!()
         };
@@ -533,7 +655,7 @@ mod test {
     }
 
     #[test]
-    fn for_inside_if () {
+    fn for_inside_if() {
         let actual: Recoverable<MyNode> = parse_quote! {
             @if just && an || expression {
                 @for x in foo {
@@ -551,9 +673,7 @@ mod test {
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
         let node = expr.then_branch.body.iter().next().unwrap();
-        let Node::Custom(actual) = node else {
-            panic!()
-        };
+        let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::For(expr) = &actual.expression else {
             panic!()
         };
