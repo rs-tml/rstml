@@ -115,8 +115,7 @@ macro_rules! impl_tuple {
                 }
             }
             fn peek(input: ParseStream) -> bool {
-                dbg!(&input);
-                $(dbg!($name::peek_element(&input.fork())))||*
+                $($name::peek_element(&input.fork()))||*
             }
         }
     };

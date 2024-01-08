@@ -5,8 +5,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use rstml::{
     node::{Node, NodeAttribute, NodeName},
     visitor::{visit_attributes, visit_nodes, Visitor},
-    Parser, ParserConfig,
-    Infallible,
+    Infallible, Parser, ParserConfig,
 };
 use syn::spanned::Spanned;
 // mod escape;
@@ -61,7 +60,7 @@ impl<'a> Visitor for WalkNodes<'a> {
         self.output.static_format.push_str(&node.value_string());
         false
     }
-    fn visit_raw_node<OtherC: rstml::node::CustomNode + Clone + std::fmt::Debug>(
+    fn visit_raw_node<OtherC: rstml::node::CustomNode>(
         &mut self,
         node: &mut rstml::node::RawText<OtherC>,
     ) -> bool {
