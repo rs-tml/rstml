@@ -151,6 +151,7 @@ impl ExtendableCustomNode {
     pub fn try_downcast_ref<T: CustomNode + 'static>(&self) -> Option<&T> {
         self.value.downcast_ref::<T>()
     }
+
     pub fn parse2_with_config<E: Tuple + 'static>(
         config: ParserConfig,
         tokens: proc_macro2::TokenStream,
