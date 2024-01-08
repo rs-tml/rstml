@@ -32,7 +32,10 @@ pub fn inject_raw_text_default<C: CustomNode>(source: &mut [Node<C>]) {
 
 // Inject raw text to every raw node, recovered using proc-macro2 second
 // parsing;
-pub fn inject_raw_text<C: CustomNode + std::fmt::Debug>(source: &mut [Node<C>], hacked: &[Node<C>]) {
+pub fn inject_raw_text<C: CustomNode + std::fmt::Debug>(
+    source: &mut [Node<C>],
+    hacked: &[Node<C>],
+) {
     assert_eq!(
         source.len(),
         hacked.len(),

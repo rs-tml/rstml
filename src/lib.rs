@@ -237,9 +237,8 @@ pub mod rawtext_stable_hack;
 pub mod visitor;
 pub use config::ParserConfig;
 pub use error::Error;
-pub use node::atoms;
+pub use node::{atoms, Infallible};
 use node::{CustomNode, Node};
-pub use node::Infallible;
 pub use parser::{recoverable, recoverable::ParsingResult, Parser};
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree.

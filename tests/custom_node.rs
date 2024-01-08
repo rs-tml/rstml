@@ -2,7 +2,7 @@ use quote::{quote, TokenStreamExt};
 use rstml::{
     atoms::{self, OpenTag, OpenTagEnd},
     node::{CustomNode, Node, NodeElement},
-    recoverable::{Recoverable, ParseRecoverable},
+    recoverable::{ParseRecoverable, Recoverable},
     Parser, ParserConfig,
 };
 use syn::{parse_quote, Expr, Token};

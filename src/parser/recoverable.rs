@@ -180,11 +180,11 @@ impl RecoverableContext {
     /// [`proc_macro2_diagnostics::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
         let diag = diagnostic.into();
-        println!(
-            "Push diagnostic: {:?}, backtrace={}",
-            diag,
-            std::backtrace::Backtrace::capture()
-        );
+        // println!(
+        //     "Push diagnostic: {:?}, backtrace={}",
+        //     diag,
+        //     std::backtrace::Backtrace::capture()
+        // );
         self.diagnostics.push(diag);
     }
 }

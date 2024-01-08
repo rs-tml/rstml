@@ -9,7 +9,7 @@ use rstml::{
         NodeName, NodeType,
     },
     parse2,
-    recoverable::{RecoverableContext, ParseRecoverable},
+    recoverable::{ParseRecoverable, RecoverableContext},
     Parser, ParserConfig,
 };
 use syn::{
@@ -166,7 +166,6 @@ struct TestCustomNode {
     data: TokenStream,
 }
 
-
 impl ToTokens for TestCustomNode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.bracket.surround(tokens, |c| self.data.to_tokens(c))
@@ -191,7 +190,6 @@ impl CustomNode for TestCustomNode {
     fn peek_element(input: ParseStream) -> bool {
         input.peek(Bracket)
     }
-
 }
 
 macro_rules! test_unquoted {
