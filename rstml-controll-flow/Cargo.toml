@@ -15,3 +15,9 @@ rstml = { version = "0.11.0", path = "../", features = [
 ] }
 proc-macro2-diagnostics = "0.10"
 derive-where = "1.2.5"
+
+[features]
+default = ["extendable"]
+# If feature activated Node should be parsed through `ExtendableCustomNode::parse2_with_config`
+extendable = []
+

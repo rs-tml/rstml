@@ -136,6 +136,8 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
             top_level_nodes += 1;
             nodes.push(parsed_node)
         }
+        dbg!(input.cursor().eof());
+        dbg!(&parser, input);
 
         // its important to skip tokens, to avoid Unexpected tokens errors.
         if !input.is_empty() {

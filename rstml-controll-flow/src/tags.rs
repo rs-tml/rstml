@@ -1,4 +1,4 @@
-use std::{convert::Infallible, fmt::Debug};
+use std::fmt::Debug;
 
 use derive_where::derive_where;
 use proc_macro2_diagnostics::Diagnostic;
@@ -15,8 +15,16 @@ use syn::{
     Expr, Pat, Token,
 };
 
+#[cfg(not(feature = "extendable"))]
 type Node = RNode<Conditions>;
+
+#[cfg(feature = "extendable")]
+type Node = RNode<crate::ExtendableCustomNode>;
+
 use super::Either;
+#[cfg(feature = "extendable")]
+use crate::ExtendableCustomNode;
+use crate::TryIntoOrCloneRef;
 /// End part of control flow tag ending
 /// `/>` (self closed) or `!>` (regular, token `!` can be changed)
 ///
@@ -161,8 +169,7 @@ impl ParseRecoverable for ForNode {
             Pat::parse_multi_with_leading_vert(input)
         })?;
         let token_in = parser.parse_simple(input)?;
-        let expr = parser.parse_simple(input)?;
-        let open_tag_end: ControlFlowTagEnd = parser.parse_simple(input)?;
+        let (expr, open_tag_end): (_, ControlFlowTagEnd) = parser.parse_simple_until(input)?;
 
         let (body, close_tag) = if open_tag_end.is_start() {
             // If node is not raw use any closing tag as separator, to early report about
@@ -260,7 +267,21 @@ impl ParseRecoverable for ElseNode {
         })
     }
 }
-// A lot of bounds on type definition require a lot of bounds in type
+
+#[cfg(feature = "extendable")]
+impl TryIntoOrCloneRef<Conditions> for ExtendableCustomNode {
+    fn try_into_or_clone_ref(self) -> Either<Conditions, Self> {
+        let Some(ref_val) = self.try_downcast_ref::<Conditions>() else {
+            return Either::B(self);
+        };
+        Either::A(ref_val.clone())
+    }
+    fn new_from_value(value: Conditions) -> Self {
+        ExtendableCustomNode::from_value(value)
+    }
+}
+
+// A lot of bounds o§n type definition require a lot of bounds in type
 // declaration.
 impl ParseRecoverable for IfNode {
     // Parse as regular element,
@@ -278,7 +299,7 @@ impl ParseRecoverable for IfNode {
             token_gt: open_tag_end.token_gt,
             token_solidus: None,
         };
-        let (body, close_tag) = NodeElement::<Conditions>::parse_children(
+        let (body, close_tag) = NodeElement::parse_children(
             parser,
             input,
             false,
@@ -295,8 +316,8 @@ impl ParseRecoverable for IfNode {
         let mut modified_body = Vec::new();
         for el in body {
             let rest = match el {
-                Node::Custom(c) => match c {
-                    Conditions::ElseIf(else_if) => {
+                Node::Custom(c) => match c.try_into_or_clone_ref() {
+                    Either::A(Conditions::ElseIf(else_if)) => {
                         if else_child.is_some() {
                             parser.push_diagnostic(Diagnostic::spanned(
                                 else_if.span(),
@@ -308,11 +329,14 @@ impl ParseRecoverable for IfNode {
                         else_ifs.push(else_if);
                         continue;
                     }
-                    Conditions::Else(else_) => {
+                    Either::A(Conditions::Else(else_)) => {
                         else_child = Some(else_);
                         continue;
                     }
-                    rest => Node::Custom(rest),
+                    Either::A(condition) => {
+                        Node::Custom(TryIntoOrCloneRef::new_from_value(condition))
+                    }
+                    Either::B(rest) => Node::Custom(rest),
                 },
                 _ => el,
             };
@@ -353,12 +377,6 @@ impl Conditions {
     }
 }
 
-impl From<Infallible> for Conditions {
-    fn from(_: Infallible) -> Self {
-        unreachable!()
-    }
-}
-
 impl ToTokens for Conditions {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
@@ -375,18 +393,18 @@ impl ParseRecoverable for Conditions {
         parser: &mut rstml::recoverable::RecoverableContext,
         input: ParseStream,
     ) -> Option<Self> {
-        let variants = if input.peek(Token![if]) {
+        let variants = if input.peek2(Token![if]) {
             let if_ = IfNode::parse_recoverable(parser, input)?;
             Self::If(if_)
-        } else if input.peek(Token![else]) {
-            if input.peek2(Token![if]) {
+        } else if input.peek2(Token![else]) {
+            if input.peek3(Token![if]) {
                 let else_if = ElseIfNode::parse_recoverable(parser, input)?;
                 Self::ElseIf(else_if)
             } else {
                 let else_ = ElseNode::parse_recoverable(parser, input)?;
                 Self::Else(else_)
             }
-        } else if input.peek(Token![for]) {
+        } else if input.peek2(Token![for]) {
             let for_ = ForNode::parse_recoverable(parser, input)?;
             Self::For(for_)
         } else {
@@ -403,6 +421,7 @@ impl CustomNode for Conditions {
     }
 }
 
+#[cfg(not(feature = "extendable"))]
 #[cfg(test)]
 mod test {
     use quote::quote;
