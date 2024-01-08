@@ -1,8 +1,10 @@
-use std::{ fmt::Debug, marker::PhantomData};
+use std::marker::PhantomData;
 
-use crate::Infallible;
 use super::node::*;
-use crate::atoms::{CloseTag, OpenTag};
+use crate::{
+    atoms::{CloseTag, OpenTag},
+    Infallible,
+};
 
 /// Enum that represents the different types with valid Rust code that can be
 /// visited using `syn::Visitor`. Usually `syn::Block` or `syn::Expr`.
@@ -34,10 +36,7 @@ pub trait Visitor {
     fn visit_doctype(&mut self, _node: &mut NodeDoctype) -> bool {
         true
     }
-    fn visit_raw_node<OtherC: CustomNode + Clone + Debug>(
-        &mut self,
-        _node: &mut RawText<OtherC>,
-    ) -> bool {
+    fn visit_raw_node<OtherC: CustomNode>(&mut self, _node: &mut RawText<OtherC>) -> bool {
         true
     }
     fn visit_custom(&mut self, _node: &mut Self::Custom) -> bool {
@@ -111,14 +110,87 @@ macro_rules! try_visit {
 /// Wrapper for visitor that calls inner visitors.
 /// Inner visitor should implement `Visitor` trait and
 /// `syn::visit_mut::VisitMut`.
+///
+/// For regular usecases it is recommended to use `visit_nodes`,
+/// `visit_nodes_with_custom_handler` or `visit_attributes` functions.
+///
+/// But if you need it can be used by calling `visit_*` methods directly.
+///
+/// Example:
+/// ```rust
+/// use quote::quote;
+/// use rstml::{
+///     node::{Node, NodeText},
+///     visitor::{Visitor, VisitorWithDefault},
+///     Infallible,
+/// };
+/// use syn::parse_quote;
+///
+/// struct TestVisitor;
+/// impl Visitor for TestVisitor {
+///     type Custom = Infallible;
+///     fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
+///         *node = parse_quote!("modified");
+///         true
+///     }
+/// }
+/// impl syn::visit_mut::VisitMut for TestVisitor {}
+///
+/// let mut visitor = VisitorWithDefault::new(TestVisitor);
+///
+/// let tokens = quote! {
+///     <div>
+///         <span>"Some raw text"</span>
+///         <span></span>"And text after span"
+///     </div>
+/// };
+/// let mut nodes = rstml::parse2(tokens).unwrap();
+/// for node in &mut nodes {
+///     visitor.visit_node(node);
+/// }
+/// let result = quote! {
+///     #(#nodes)*
+/// };
+/// assert_eq!(
+///     result.to_string(),
+///     quote! {
+///         <div>
+///             <span>"modified"</span>
+///             <span></span>"modified"
+///         </div>
+///     }
+///     .to_string()
+/// );
+/// ```
 pub struct VisitorWithDefault<C: CustomNode, V: Visitor + syn::visit_mut::VisitMut> {
     custom: PhantomData<C>,
     visitor: V,
+    custom_handler: Option<Box<dyn FnMut(&mut C) -> bool>>,
+}
+impl<C, V> VisitorWithDefault<C, V>
+where
+    C: CustomNode,
+    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
+{
+    pub fn new(visitor: V) -> Self {
+        Self {
+            custom: PhantomData,
+            visitor,
+            custom_handler: None,
+        }
+    }
+    pub fn with_custom_handler(visitor: V, handler: Box<dyn FnMut(&mut C) -> bool>) -> Self {
+        Self {
+            custom: PhantomData,
+            visitor,
+            custom_handler: Some(handler),
+        }
+    }
 }
 
 impl<C, V> Visitor for VisitorWithDefault<C, V>
 where
-    C: CustomNode + Debug + Clone,
+    C: CustomNode,
     V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
 {
     type Custom = C;
@@ -154,10 +226,7 @@ where
 
         self.visit_raw_node(&mut node.value)
     }
-    fn visit_raw_node<OtherC: CustomNode + Clone + Debug>(
-        &mut self,
-        node: &mut RawText<OtherC>,
-    ) -> bool {
+    fn visit_raw_node<OtherC: CustomNode>(&mut self, node: &mut RawText<OtherC>) -> bool {
         visit_child!(self.visitor.visit_raw_node(node));
 
         true
@@ -165,7 +234,11 @@ where
     fn visit_custom(&mut self, node: &mut Self::Custom) -> bool {
         visit_child!(self.visitor.visit_custom(node));
 
-        true
+        if let Some(ref mut handler) = &mut self.custom_handler {
+            handler(node)
+        } else {
+            true
+        }
     }
     fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
         visit_child!(self.visitor.visit_text_node(node));
@@ -285,14 +358,20 @@ where
         true
     }
 }
-
-pub fn visit_nodes<V>(nodes: &mut [Node], visitor: V) -> V
+/// Visitor entrypoint.
+/// Visit nodes in array calling visitor methods.
+/// Recursively visit nodes in children, and attributes.
+///
+/// Return modified visitor back
+pub fn visit_nodes<V, C>(nodes: &mut [Node<C>], visitor: V) -> V
 where
-    V: Visitor<Custom = Infallible> + syn::visit_mut::VisitMut,
+    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
+    <V as Visitor>::Custom: CustomNode,
 {
     let mut visitor = VisitorWithDefault {
         custom: PhantomData,
         visitor,
+        custom_handler: None,
     };
     for node in nodes {
         visitor.visit_node(node);
@@ -300,6 +379,35 @@ where
     visitor.visitor
 }
 
+/// Visitor entrypoint.
+/// Visit nodes in array calling visitor methods.
+/// Recursively visit nodes in children, and attributes.
+/// Provide custom handler that is used to visit custom nodes.
+/// Custom handler should return true if visitor should continue to traverse,
+/// and call visitor methods for its children.
+///
+/// Return modified visitor back
+pub fn visit_nodes_with_custom_handler<V, C>(
+    nodes: &mut [Node<C>],
+    handler: Box<dyn FnMut(&mut C) -> bool>,
+    visitor: V,
+) -> V
+where
+    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
+    <V as Visitor>::Custom: CustomNode,
+{
+    let mut visitor = VisitorWithDefault {
+        custom: PhantomData,
+        visitor,
+        custom_handler: Some(handler),
+    };
+    for node in nodes {
+        visitor.visit_node(node);
+    }
+    visitor.visitor
+}
+
+/// Visit attributes in array calling visitor methods.
 pub fn visit_attributes<V>(attributes: &mut [NodeAttribute], visitor: V) -> V
 where
     V: Visitor<Custom = Infallible> + syn::visit_mut::VisitMut,
@@ -307,6 +415,7 @@ where
     let mut visitor = VisitorWithDefault {
         custom: PhantomData,
         visitor,
+        custom_handler: None,
     };
     for attribute in attributes {
         visitor.visit_attribute(attribute);
@@ -316,10 +425,11 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::Infallible;
     use quote::{quote, ToTokens};
+    use syn::parse_quote;
 
     use super::*;
+    use crate::Infallible;
     #[test]
     fn collect_node_names() {
         #[derive(Default)]
@@ -411,10 +521,7 @@ mod tests {
         impl Visitor for TestVisitor {
             type Custom = Infallible;
 
-            fn visit_raw_node<OtherC: CustomNode + Clone + Debug>(
-                &mut self,
-                node: &mut RawText<OtherC>,
-            ) -> bool {
+            fn visit_raw_node<OtherC: CustomNode>(&mut self, node: &mut RawText<OtherC>) -> bool {
                 let raw = node.clone().convert_custom::<Infallible>();
                 self.collected_raw_text.push(raw);
                 true
@@ -483,6 +590,45 @@ mod tests {
         assert_eq!(
             literals,
             vec!["Some raw text", "And text after span", "comment"]
+        );
+    }
+
+    #[test]
+    fn modify_text_visitor() {
+        struct TestVisitor;
+        impl Visitor for TestVisitor {
+            type Custom = Infallible;
+            fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
+                *node = parse_quote!("modified");
+                true
+            }
+        }
+        impl syn::visit_mut::VisitMut for TestVisitor {}
+
+        let mut visitor = VisitorWithDefault::new(TestVisitor);
+
+        let tokens = quote! {
+            <div>
+                <span>"Some raw text"</span>
+                <span></span>"And text after span"
+            </div>
+        };
+        let mut nodes = crate::parse2(tokens).unwrap();
+        for node in &mut nodes {
+            visitor.visit_node(node);
+        }
+        let result = quote! {
+            #(#nodes)*
+        };
+        assert_eq!(
+            result.to_string(),
+            quote! {
+                <div>
+                    <span>"modified"</span>
+                    <span></span>"modified"
+                </div>
+            }
+            .to_string()
         );
     }
 }

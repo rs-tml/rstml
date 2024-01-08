@@ -17,10 +17,16 @@ bench = false
 [dependencies]
 proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
 quote = "1.0.21"
-syn = { version = "2.0.15", features = ["visit-mut", "full", "parsing", "extra-traits"] }
+syn = { version = "2.0.15", features = [
+    "visit-mut",
+    "full",
+    "parsing",
+    "extra-traits",
+] }
 thiserror = "1.0.37"
 syn_derive = "0.1.6"
 proc-macro2-diagnostics = { version = "0.10", default-features = false }
+derive-where = "1.2.5"
 
 [dev-dependencies]
 proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
