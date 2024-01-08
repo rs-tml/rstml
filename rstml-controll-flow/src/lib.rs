@@ -8,7 +8,12 @@ use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
 
 pub mod escape;
+#[cfg(feature = "extendable")]
+pub mod extendable;
 pub mod tags;
+
+#[cfg(feature = "extendable")]
+pub use extendable::ExtendableCustomNode;
 
 // Either variant, with Parse/ToTokens implementation
 #[derive(Copy, Clone, Debug)]
@@ -101,5 +106,86 @@ impl<A, B> From<EitherA<A, B>> for Either<A, B> {
 impl<A, B> From<EitherB<A, B>> for Either<A, B> {
     fn from(value: EitherB<A, B>) -> Self {
         Self::B(value.1)
+    }
+}
+
+pub trait TryIntoOrCloneRef<T>: Sized {
+    fn try_into_or_clone_ref(self) -> Either<T, Self>;
+    fn new_from_value(value: T) -> Self;
+}
+
+impl<T> TryIntoOrCloneRef<T> for T {
+    fn try_into_or_clone_ref(self) -> Either<T, Self> {
+        Either::A(self)
+    }
+    fn new_from_value(value: T) -> Self {
+        value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    #[cfg(feature = "extendable")]
+    fn test_mixed_tags_and_escape() {
+        use quote::ToTokens;
+        use rstml::node::Node;
+
+        use crate::{escape, tags, ExtendableCustomNode};
+
+        let tokens = quote::quote! {
+                @if true {
+                    <p>True</p>
+                    <for foo in array !>
+                        <p>Foo</p>
+                    </for>
+                }
+                else {
+                    <p>False</p>
+                }
+                @for foo in array {
+                    <if foo == 1 !>
+                        <p>Foo</p>
+                    </if>
+                    <p>Foo</p>
+                }
+        };
+
+        let result = ExtendableCustomNode::parse2_with_config::<(
+            tags::Conditions,
+            escape::EscapeCode,
+        )>(Default::default(), tokens);
+        let ok = result.into_result().unwrap();
+        assert_eq!(ok.len(), 2);
+
+        let Node::Custom(c) = &ok[0] else {
+            unreachable!()
+        };
+        let escape_if = c.try_downcast_ref::<escape::EscapeCode>().unwrap();
+        let escape::EscapedExpr::If(if_) = &escape_if.expression else {
+            unreachable!()
+        };
+        assert_eq!(if_.condition.to_token_stream().to_string(), "true");
+        let for_tag = &if_.then_branch.body[1];
+        let Node::Custom(c) = &for_tag else {
+            unreachable!()
+        };
+        let for_tag = c.try_downcast_ref::<tags::Conditions>().unwrap();
+        let tags::Conditions::For(for_) = for_tag else {
+            unreachable!()
+        };
+
+        assert_eq!(for_.pat.to_token_stream().to_string(), "foo");
+
+        let Node::Custom(c) = &ok[1] else {
+            unreachable!()
+        };
+
+        let escape_for = c.try_downcast_ref::<escape::EscapeCode>().unwrap();
+        let escape::EscapedExpr::For(for_) = &escape_for.expression else {
+            unreachable!()
+        };
+        assert_eq!(for_.pat.to_token_stream().to_string(), "foo");
     }
 }

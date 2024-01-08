@@ -10,7 +10,7 @@
 
 use quote::{ToTokens, TokenStreamExt};
 use rstml::{
-    node::{CustomNode, Node},
+    node::{CustomNode, Node as RNode},
     recoverable::{ParseRecoverable, RecoverableContext},
 };
 use syn::{
@@ -19,6 +19,13 @@ use syn::{
     token::Brace,
     Expr, Pat, Token,
 };
+
+
+#[cfg(not(feature = "extendable"))]
+type Node = RNode<EscapeCode>;
+
+#[cfg(feature = "extendable")]
+type Node = RNode<crate::ExtendableCustomNode>;
 
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct Block {
@@ -132,7 +139,7 @@ impl ParseRecoverable for IfExpr {
     }
 }
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct ForExpr {
     pub keyword: Token![for],
     pub pat: Pat,
@@ -162,7 +169,7 @@ impl ParseRecoverable for ForExpr {
     }
 }
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct Arm {
     pub pat: Pat,
     // pub guard: Option<(If, Box<Expr>)>,
@@ -189,7 +196,7 @@ impl ParseRecoverable for Arm {
 //     | x => {}
 // }
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct MatchExpr {
     pub keyword: Token![match],
     pub expr: Expr,
@@ -232,7 +239,7 @@ impl ParseRecoverable for MatchExpr {
 // Minimal version of syn::Expr, that uses custom `Block` with `Node` array
 // instead of `syn::Block` that contain valid rust code.
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum EscapedExpr {
     If(IfExpr),
     For(ForExpr),
@@ -254,10 +261,10 @@ impl ParseRecoverable for EscapedExpr {
     }
 }
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct EscapeCode<T: ToTokens = Token![@]> {
-    escape_token: T,
-    expression: EscapedExpr,
+    pub escape_token: T,
+    pub expression: EscapedExpr,
 }
 
 impl<T: ToTokens + Parse> ParseRecoverable for EscapeCode<T> {
@@ -287,6 +294,7 @@ where
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "extendable"))]
 mod test {
     use quote::quote;
     use rstml::{node::Node, recoverable::Recoverable, Parser, ParserConfig};
@@ -493,5 +501,63 @@ mod test {
         };
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
+    }
+
+
+    #[test]
+    fn check_if_inside_if () {
+        let actual: Recoverable<MyNode> = parse_quote! {
+            @if just && an || expression {
+                @if foo > bar {
+                    <div/>
+                }
+            }
+        };
+        let Node::Custom(actual) = actual.inner() else {
+            panic!()
+        };
+
+        let EscapedExpr::If(expr) = actual.expression else {
+            panic!()
+        };
+
+        assert_eq!(expr.condition, parse_quote!(just && an || expression));
+        let node = expr.then_branch.body.iter().next().unwrap();
+        let Node::Custom(actual) = node else {
+            panic!()
+        };
+        let EscapedExpr::If(expr) = &actual.expression else {
+            panic!()
+        };
+        assert_eq!(expr.condition, parse_quote!(foo > bar));
+    }
+
+    #[test]
+    fn for_inside_if () {
+        let actual: Recoverable<MyNode> = parse_quote! {
+            @if just && an || expression {
+                @for x in foo {
+                    <div/>
+                }
+            }
+        };
+        let Node::Custom(actual) = actual.inner() else {
+            panic!()
+        };
+
+        let EscapedExpr::If(expr) = actual.expression else {
+            panic!()
+        };
+
+        assert_eq!(expr.condition, parse_quote!(just && an || expression));
+        let node = expr.then_branch.body.iter().next().unwrap();
+        let Node::Custom(actual) = node else {
+            panic!()
+        };
+        let EscapedExpr::For(expr) = &actual.expression else {
+            panic!()
+        };
+        assert_eq!(expr.pat, parse_quote!(x));
+        assert_eq!(expr.expr, parse_quote!(foo));
     }
 }

@@ -45,7 +45,8 @@ use syn::parse::{Parse, ParseStream};
 
 use crate::{
     config::{ElementWildcardFn, TransformBlockFn},
-    ParserConfig, node::CustomNode,
+    node::CustomNode,
+    ParserConfig,
 };
 
 /// Config of parser.
@@ -108,13 +109,13 @@ pub struct RecoverableContext {
 impl PartialEq for RecoverableContext {
     fn eq(&self, other: &Self) -> bool {
         if self.diagnostics.len() != other.diagnostics.len() || self.config != other.config {
-            return false
+            return false;
         }
 
         self.diagnostics
             .iter()
             .zip(other.diagnostics.iter())
-            .all(|(a, b)| format!("{:?}",a) == format!("{:?}",b))
+            .all(|(a, b)| format!("{:?}", a) == format!("{:?}", b))
     }
 }
 impl Eq for RecoverableContext {}
@@ -138,7 +139,7 @@ impl RecoverableContext {
         match input.parse() {
             Ok(v) => Some(v),
             Err(e) => {
-                self.diagnostics.push(e.into());
+                self.push_diagnostic(e);
                 None
             }
         }
@@ -151,7 +152,7 @@ impl RecoverableContext {
         match parser(self, input) {
             Ok(v) => Some(v),
             Err(e) => {
-                self.diagnostics.push(e.into());
+                self.push_diagnostic(e);
                 None
             }
         }
@@ -169,13 +170,7 @@ impl RecoverableContext {
         match val {
             Ok(v) => Some(v),
             Err(e) => {
-                let diag = e.into();
-                // println!(
-                //     "save diagnostic {:?}, backtrace={}",
-                //     diag,
-                //     std::backtrace::Backtrace::capture()
-                // );
-                self.diagnostics.push(diag);
+                self.push_diagnostic(e);
                 None
             }
         }
@@ -185,11 +180,11 @@ impl RecoverableContext {
     /// [`proc_macro2_diagnostics::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
         let diag = diagnostic.into();
-        // println!(
-        //     "Push diagnostic: {:?}, backtrace={}",
-        //     diag,
-        //     std::backtrace::Backtrace::capture()
-        // );
+        println!(
+            "Push diagnostic: {:?}, backtrace={}",
+            diag,
+            std::backtrace::Backtrace::capture()
+        );
         self.diagnostics.push(diag);
     }
 }
