@@ -22,7 +22,7 @@ pub use node_name::{NodeName, NodeNameFragment};
 pub use node_value::{InvalidBlock, NodeBlock};
 
 pub use self::raw_text::RawText;
-use crate::recoverable::{RecoverableContext, ParseRecoverable};
+use crate::recoverable::{ParseRecoverable, RecoverableContext};
 
 /// Node types.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -264,14 +264,13 @@ pub trait CustomNode: ParseRecoverable + ToTokens {
     /// Recieves a [`ParseStream::fork`].
     ///
     /// [`ParseStream::fork`]: syn::parse::ParseBuffer::fork
-    /// 
     fn peek_element(input: ParseStream) -> bool;
 }
 
 /// Newtype for `std::convert::Infallible` used to implement
 /// `ToTokens`` for `Infallible``.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Infallible (convert::Infallible);
+pub struct Infallible(convert::Infallible);
 
 impl From<convert::Infallible> for Infallible {
     fn from(s: convert::Infallible) -> Self {
@@ -289,7 +288,7 @@ impl ParseRecoverable for Infallible {
     }
 }
 impl CustomNode for Infallible {
-    fn peek_element( _: ParseStream) -> bool {
+    fn peek_element(_: ParseStream) -> bool {
         false
     }
 }

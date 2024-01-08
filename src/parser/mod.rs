@@ -49,13 +49,10 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
         let parser = move |input: ParseStream| Ok(self.parse_syn_stream(input));
         let source = parser.parse2(v.into()).expect("No errors from parser");
 
-        #[cfg(not(feature = "rawtext-stable-hack"))]
-        {
-            return source;
-        }
-        // re-parse using proc_macro2::fallback, only if output without error
         #[cfg(feature = "rawtext-stable-hack")]
-        Self::reparse_raw_text(&self, parser, source)
+        // re-parse using proc_macro2::fallback, only if output without error
+        let source = Self::reparse_raw_text(&self, parser, source);
+        source
     }
     #[cfg(feature = "rawtext-stable-hack")]
     fn reparse_raw_text<Parser>(

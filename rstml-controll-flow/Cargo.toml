@@ -10,14 +10,11 @@ proc-macro2 = "1.0.47"
 quote = "1.0.21"
 syn = "2.0.15"
 syn_derive = "0.1"
-rstml = { version = "0.11.0", path = "../", features = [
-    "rawtext-stable-hack",
-] }
+rstml = { version = "0.11.0", path = "../", features = ["rawtext-stable-hack"] }
 proc-macro2-diagnostics = "0.10"
 derive-where = "1.2.5"
 
 [features]
-default = ["extendable"]
+default = []
 # If feature activated Node should be parsed through `ExtendableCustomNode::parse2_with_config`
 extendable = []
-

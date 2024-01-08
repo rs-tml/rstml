@@ -8,8 +8,8 @@ use crate::rawtext_stable_hack::MacroPattern;
 use crate::{
     atoms::{CloseTag, OpenTag},
     node::{CustomNode, NodeType},
+    Infallible,
 };
-use crate::Infallible;
 
 pub type TransformBlockFn = dyn Fn(ParseStream) -> Result<Option<TokenStream>>;
 pub type ElementWildcardFn = dyn Fn(&OpenTag, &CloseTag) -> bool;
@@ -251,12 +251,12 @@ impl<C> ParserConfig<C> {
     /// Example:
     ///
     /// Imagine one have macro, that used like this:
-    /// ```
+    /// ```no_compile
     /// html! {some_context, provided, [ can use groups, etc], {<div>}, [other context]};
     /// ```
     ///
-    /// One can set `macro_call_pattern` like this:
-    /// ```
+    /// Then one can set `macro_call_pattern` with following arguments:
+    /// ```no_compile
     /// config.macro_call_pattern(quote!(html! // macro name currently is not checked
     ///     {ident, ident, // can use real idents, or any other
     ///         [/* can ignore context of auxilary groups */],
@@ -264,6 +264,8 @@ impl<C> ParserConfig<C> {
     ///         []
     ///     }))
     /// ```
+    ///
+    /// And rstml will do the rest for you.
     ///
     /// Panics if no `%%` token was found.
     ///
