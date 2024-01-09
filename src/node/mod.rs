@@ -268,7 +268,7 @@ pub trait CustomNode: ParseRecoverable + ToTokens {
 }
 
 /// Newtype for `std::convert::Infallible` used to implement
-/// `ToTokens`` for `Infallible``.
+/// `ToTokens` for `Infallible`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Infallible(convert::Infallible);
 

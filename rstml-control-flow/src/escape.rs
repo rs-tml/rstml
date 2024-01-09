@@ -18,7 +18,6 @@ use syn::{
     braced,
     parse::{Parse, ParseStream},
     token::Brace,
-    visit_mut::VisitMut,
     Expr, Pat, Token,
 };
 
@@ -311,10 +310,26 @@ where
 }
 
 pub mod visitor_impl {
+    use rstml::visitor::{CustomNodeWalker, RustCode};
+
     use super::*;
 
+    pub struct EscapeCodeWalker;
+    impl CustomNodeWalker for EscapeCodeWalker {
+        type Custom = CustomNodeType;
+        fn walk_custom_node_fields<VisitorImpl>(
+            visitor: &mut VisitorImpl,
+            node: &mut Self::Custom,
+        ) -> bool
+        where
+            VisitorImpl: Visitor<CustomNodeType>,
+        {
+            EscapeCode::visit_custom_children(visitor, node)
+        }
+    }
+
     impl Block {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             block: &mut Self,
         ) -> bool {
@@ -323,17 +338,17 @@ pub mod visitor_impl {
     }
 
     impl ElseIf {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
-            visitor.visit_expr_mut(&mut expr.condition);
+            visitor.visit_rust_code(RustCode::Expr(&mut expr.condition));
             Block::visit_custom_children(visitor, &mut expr.then_branch)
         }
     }
 
     impl Else {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
@@ -342,11 +357,11 @@ pub mod visitor_impl {
     }
 
     impl IfExpr {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
-            visitor.visit_expr_mut(&mut expr.condition);
+            visitor.visit_rust_code(RustCode::Expr(&mut expr.condition));
             Block::visit_custom_children(visitor, &mut expr.then_branch)
                 || expr
                     .else_ifs
@@ -360,30 +375,30 @@ pub mod visitor_impl {
         }
     }
     impl ForExpr {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
-            visitor.visit_pat_mut(&mut expr.pat);
-            visitor.visit_expr_mut(&mut expr.expr);
+            visitor.visit_rust_code(RustCode::Pat(&mut expr.pat));
+            visitor.visit_rust_code(RustCode::Expr(&mut expr.expr));
             Block::visit_custom_children(visitor, &mut expr.block)
         }
     }
     impl Arm {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
-            visitor.visit_pat_mut(&mut expr.pat);
+            visitor.visit_rust_code(RustCode::Pat(&mut expr.pat));
             Block::visit_custom_children(visitor, &mut expr.body)
         }
     }
     impl MatchExpr {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
-            visitor.visit_expr_mut(&mut expr.expr);
+            visitor.visit_rust_code(RustCode::Expr(&mut expr.expr));
 
             expr.arms
                 .iter_mut()
@@ -391,7 +406,7 @@ pub mod visitor_impl {
         }
     }
     impl EscapedExpr {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             expr: &mut Self,
         ) -> bool {
@@ -403,7 +418,7 @@ pub mod visitor_impl {
         }
     }
     impl EscapeCode {
-        pub fn visit_custom_children<V: Visitor<Custom = CustomNodeType> + VisitMut>(
+        pub fn visit_custom_children<V: Visitor<CustomNodeType>>(
             visitor: &mut V,
             node: &mut CustomNodeType,
         ) -> bool {
@@ -420,7 +435,7 @@ pub mod visitor_impl {
 
 #[cfg(test)]
 #[cfg(not(feature = "extendable"))]
-mod test {
+mod test_typed {
     use quote::quote;
     use rstml::{node::Node, recoverable::Recoverable, Parser, ParserConfig};
     use syn::{parse_quote, Token};
@@ -603,32 +618,6 @@ mod test {
     }
 
     #[test]
-    fn custom_node_using_config() {
-        let actual = Parser::new(
-            ParserConfig::new()
-                .element_close_use_default_wildcard_ident(false)
-                .custom_node::<MyCustomNode>(),
-        )
-        .parse_simple(quote! {
-            @if just && an || expression {
-                <a regular="html" component/>
-                <div>
-                </div>
-            }
-        })
-        .unwrap();
-        let Node::Custom(actual) = &actual[0] else {
-            panic!()
-        };
-
-        let EscapedExpr::If(expr) = &actual.expression else {
-            panic!()
-        };
-
-        assert_eq!(expr.condition, parse_quote!(just && an || expression));
-    }
-
-    #[test]
     fn check_if_inside_if() {
         let actual: Recoverable<MyNode> = parse_quote! {
             @if just && an || expression {
@@ -679,5 +668,147 @@ mod test {
         };
         assert_eq!(expr.pat, parse_quote!(x));
         assert_eq!(expr.expr, parse_quote!(foo));
+    }
+
+    #[test]
+    fn custom_node_using_config() {
+        let actual = Parser::new(
+            ParserConfig::new()
+                .element_close_use_default_wildcard_ident(false)
+                .custom_node::<MyCustomNode>(),
+        )
+        .parse_simple(quote! {
+            @if just && an || expression {
+                <a regular="html" component/>
+                <div>
+                </div>
+            }
+        })
+        .unwrap();
+        let Node::Custom(actual) = &actual[0] else {
+            panic!()
+        };
+
+        let EscapedExpr::If(expr) = &actual.expression else {
+            panic!()
+        };
+
+        assert_eq!(expr.condition, parse_quote!(just && an || expression));
+    }
+}
+
+#[cfg(test)]
+mod test_universal {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use rstml::{
+        recoverable::Recoverable, visitor::visit_nodes_with_custom, ParserConfig, ParsingResult,
+    };
+    use syn::{parse_quote, visit_mut::VisitMut};
+
+    use super::*;
+    use crate::escape::visitor_impl::EscapeCodeWalker;
+
+    // #[cfg(feature="extendable")]
+    #[cfg(not(feature = "extendable"))]
+    fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
+        use rstml::Parser;
+
+        let actual =
+            Parser::new(ParserConfig::new().custom_node::<EscapeCode>()).parse_recoverable(input);
+
+        return actual;
+    }
+    #[cfg(feature = "extendable")]
+    fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
+        use crate::ExtendableCustomNode;
+
+        let result =
+            ExtendableCustomNode::parse2_with_config::<(EscapeCode,)>(ParserConfig::new(), input);
+        return result;
+    }
+
+    // For extendable custom node it is safe to use only after parsing.
+    fn reparse_concrete<A: ToTokens>(val: A) -> EscapeCode {
+        let recoverable: Recoverable<_> = parse_quote!(#val);
+        recoverable.inner()
+    }
+
+    #[test]
+    fn if_node_reparsable() {
+        let tokens = quote! {
+            @if just && an || expression {
+                <div/>
+            }
+        };
+
+        let actual = &parse_universal(tokens).into_result().unwrap()[0];
+
+        let Node::Custom(actual) = actual else {
+            panic!()
+        };
+        let actual = reparse_concrete(actual);
+
+        let EscapedExpr::If(expr) = actual.expression else {
+            panic!()
+        };
+
+        assert_eq!(expr.condition, parse_quote!(just && an || expression));
+    }
+    #[test]
+    fn if_node_visitor_rstml() {
+        let tokens = quote! {
+            @if just && an || expression {
+                <div/>
+            }
+        };
+
+        let mut actual = parse_universal(tokens).into_result().unwrap();
+
+        struct ElementVisitor {
+            elements: Vec<String>,
+        }
+        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {
+            fn visit_element(&mut self, node: &mut rstml::node::NodeElement<C>) -> bool {
+                self.elements.push(node.open_tag.name.to_string());
+                true
+            }
+        }
+        impl VisitMut for ElementVisitor {}
+
+        let visitor = ElementVisitor {
+            elements: Vec::new(),
+        };
+        let elements =
+            visit_nodes_with_custom::<_, _, EscapeCodeWalker>(&mut actual, visitor).elements;
+
+        assert_eq!(&elements, &["div"]);
+    }
+
+    #[test]
+    fn if_node_visitor_syn_expr() {
+        let tokens = quote! {
+            @if just && an || expression {
+                <div/>
+            }
+        };
+
+        let mut actual = parse_universal(tokens).into_result().unwrap();
+
+        struct ElementVisitor {
+            exprs: Vec<String>,
+        }
+        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {}
+        impl VisitMut for ElementVisitor {
+            fn visit_expr_mut(&mut self, exprs: &mut syn::Expr) {
+                self.exprs.push(exprs.to_token_stream().to_string());
+            }
+        }
+
+        let visitor = ElementVisitor { exprs: Vec::new() };
+        let elements =
+            visit_nodes_with_custom::<_, _, EscapeCodeWalker>(&mut actual, visitor).exprs;
+
+        assert_eq!(&elements, &["just && an || expression"]);
     }
 }

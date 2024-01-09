@@ -83,7 +83,7 @@ let nodes = parse2_with_config(template, Default::default().with_custom_nodes::<
 ## Using multiple `CustomNode`s at once
 It is also possible to use more than one `CustomNode` at once.
 For example, if you want to use both `Conditions` and `EscapedCode` custom nodes.
-`rstml-controll-flow` crate provides an `ExtendableCustomNode` struct that can be used to combine multiple `CustomNode`s into one. Check out `extendable.rs` docs and tests in `lib.rs` for more details.
+`rstml-control-flow` crate provides an `ExtendableCustomNode` struct that can be used to combine multiple `CustomNode`s into one. Check out `extendable.rs` docs and tests in `lib.rs` for more details.
 
 
 ```rust

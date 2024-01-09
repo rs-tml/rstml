@@ -5,7 +5,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use rstml::{
     node::{Node, NodeAttribute, NodeName},
     visitor::{visit_attributes, visit_nodes, Visitor},
-    Infallible, Parser, ParserConfig,
+    Parser, ParserConfig,
 };
 use syn::spanned::Spanned;
 // mod escape;
@@ -46,9 +46,10 @@ impl WalkNodesOutput {
 }
 impl<'a> syn::visit_mut::VisitMut for WalkNodes<'a> {}
 
-impl<'a> Visitor for WalkNodes<'a> {
-    type Custom = Infallible;
-
+impl<'a, C> Visitor<C> for WalkNodes<'a>
+where
+    C: rstml::node::CustomNode + 'static,
+{
     fn visit_doctype(&mut self, doctype: &mut rstml::node::NodeDoctype) -> bool {
         let value = &doctype.value.to_token_stream_string();
         self.output
@@ -67,7 +68,7 @@ impl<'a> Visitor for WalkNodes<'a> {
         self.output.static_format.push_str(&node.to_string_best());
         false
     }
-    fn visit_fragment(&mut self, fragment: &mut rstml::node::NodeFragment<Self::Custom>) -> bool {
+    fn visit_fragment(&mut self, fragment: &mut rstml::node::NodeFragment<C>) -> bool {
         let visitor = self.child_output();
         let child_output = visit_nodes(&mut fragment.children, visitor);
         self.output.extend(child_output.output);
@@ -85,7 +86,7 @@ impl<'a> Visitor for WalkNodes<'a> {
         self.output.values.push(block.to_token_stream());
         false
     }
-    fn visit_element(&mut self, element: &mut rstml::node::NodeElement<Self::Custom>) -> bool {
+    fn visit_element(&mut self, element: &mut rstml::node::NodeElement<C>) -> bool {
         let name = element.name().to_string();
         self.output.static_format.push_str(&format!("<{}", name));
         self.output

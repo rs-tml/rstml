@@ -131,12 +131,34 @@ impl_tuple!(A, B, C, D, E, F, G);
 impl_tuple!(A, B, C, D, E, F, G, H);
 
 fn init_extendable_node<E: Tuple + 'static>() {
+    assert_context_empty();
     TO_TOKENS.with_borrow_mut(|f| *f = Some(Box::new(E::to_tokens)));
     PARSE_RECOVERABLE.with_borrow_mut(|f| *f = Some(Box::new(E::parse_recoverable)));
     PEEK.with_borrow_mut(|f| *f = Some(Box::new(E::peek)));
 }
 
-fn clear_context() {
+fn assert_context_empty() {
+    TO_TOKENS.with_borrow(|f| {
+        assert!(
+            f.is_none(),
+            "Cannot init ExtendableCustomNode context multiple times"
+        )
+    });
+    PARSE_RECOVERABLE.with_borrow(|f| {
+        assert!(
+            f.is_none(),
+            "Cannot init ExtendableCustomNode context multiple times"
+        )
+    });
+    PEEK.with_borrow(|f| {
+        assert!(
+            f.is_none(),
+            "Cannot init ExtendableCustomNode context multiple times"
+        )
+    });
+}
+
+pub fn clear_context() {
     TO_TOKENS.with_borrow_mut(|f| *f = None);
     PARSE_RECOVERABLE.with_borrow_mut(|f| *f = None);
     PEEK.with_borrow_mut(|f| *f = None);
@@ -152,6 +174,13 @@ impl ExtendableCustomNode {
         self.value.downcast_ref::<T>()
     }
 
+    /// Parses token stream into `Vec<Node<ExtendableCustomNode>>`
+    ///
+    /// Note: This function are using context from thread local storage,
+    /// after call it lefts context initiliazed, so to_tokens implementation can
+    /// be used. But second call to parse2_with_config will fail, because
+    /// context is already initialized.
+    /// You can use `clear_context` to clear context manually.
     pub fn parse2_with_config<E: Tuple + 'static>(
         config: ParserConfig,
         tokens: proc_macro2::TokenStream,
@@ -159,7 +188,6 @@ impl ExtendableCustomNode {
         init_extendable_node::<E>();
         let result =
             Parser::new(config.custom_node::<ExtendableCustomNode>()).parse_recoverable(tokens);
-        clear_context();
         result
     }
 }

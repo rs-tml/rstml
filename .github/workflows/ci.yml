@@ -20,11 +20,17 @@ jobs:
       - name: build
         run: cargo build
 
-      - name: test
-        run: cargo test -p rstml --features "rawtext-stable-hack-module"
-
       - name: clippy
         run: cargo clippy --workspace
+
+      - name: test on Stable
+        run: cargo test --workspace
+
+      - name: Tests with rawtext hack
+        run: cargo test -p rstml --features "rawtext-stable-hack-module"
+
+      - name: Test extendable feature in rstml-control-flow
+        run: cargo test -p rstml-control-flow --features "extendable"
 
       - uses: dtolnay/rust-toolchain@nightly
 
