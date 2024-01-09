@@ -1,6 +1,12 @@
 name: ci
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
   ci:
@@ -36,9 +42,3 @@ jobs:
 
       - name: test on Nightly
         run: cargo test --workspace 
-
-      - name: coverage
-        run: |
-          cargo install cargo-tarpaulin
-          cargo tarpaulin --out xml
-          bash <(curl -s https://codecov.io/bash)

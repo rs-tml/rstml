@@ -1,0 +1,8 @@
+[unquoted_text_on_stable]
+features = "rstml/rawtext-stable-hack"
+
+[custom_node_extendable]
+features = "rstml-control-flow/extendable"
+
+[report]
+out = ["Xml", "Html"]

@@ -208,27 +208,6 @@ impl<C: CustomNode> ParseRecoverable for RawText<C> {
             _c: PhantomData,
         })
     }
-    // (input: ParseStream) -> syn::Result<Self> {
-    //     let mut token_stream = TokenStream::new();
-    //     let any_node = |input: ParseStream| {
-    //         input.peek(Token![<])
-    //             || input.peek(Brace)
-    //             || input.peek(LitStr)
-    //             || C::peek_element(&input.fork())
-    //     };
-    //     // Parse any input until catching any node.
-    //     // Fail only on eof.
-    //     while !any_node(input) && !input.is_empty() {
-    //         token_stream.extend([input.parse::<TokenTree>()?])
-    //     }
-    //     Ok(Self {
-    //         token_stream,
-    //         context_span: None,
-    //         #[cfg(feature = "rawtext-stable-hack-module")]
-    //         recovered_text: None,
-    //         _c: PhantomData,
-    //     })
-    // }
 }
 
 impl<C: CustomNode> ToTokens for RawText<C> {
