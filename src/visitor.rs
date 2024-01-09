@@ -21,10 +21,12 @@ pub enum RustCode<'a> {
 /// Each method returns a bool that indicates if the visitor should continue to
 /// traverse the tree. If the method returns false, the visitor will stop
 /// traversing the tree.
-pub trait Visitor {
-    type Custom: CustomNode;
+///
+/// By default Visitor are abstract over CustomNode, but it is possible to
+/// implement a Visitor for concrete CustomNode.
+pub trait Visitor<Custom> {
     // Visit node types
-    fn visit_node(&mut self, _node: &mut Node<Self::Custom>) -> bool {
+    fn visit_node(&mut self, _node: &mut Node<Custom>) -> bool {
         true
     }
     fn visit_block(&mut self, _node: &mut NodeBlock) -> bool {
@@ -36,19 +38,19 @@ pub trait Visitor {
     fn visit_doctype(&mut self, _node: &mut NodeDoctype) -> bool {
         true
     }
-    fn visit_raw_node<OtherC: CustomNode>(&mut self, _node: &mut RawText<OtherC>) -> bool {
+    fn visit_raw_node<AnyC: CustomNode>(&mut self, _node: &mut RawText<AnyC>) -> bool {
         true
     }
-    fn visit_custom(&mut self, _node: &mut Self::Custom) -> bool {
+    fn visit_custom(&mut self, _node: &mut Custom) -> bool {
         true
     }
     fn visit_text_node(&mut self, _node: &mut NodeText) -> bool {
         true
     }
-    fn visit_element(&mut self, _node: &mut NodeElement<Self::Custom>) -> bool {
+    fn visit_element(&mut self, _node: &mut NodeElement<Custom>) -> bool {
         true
     }
-    fn visit_fragment(&mut self, _node: &mut NodeFragment<Self::Custom>) -> bool {
+    fn visit_fragment(&mut self, _node: &mut NodeFragment<Custom>) -> bool {
         true
     }
 
@@ -91,7 +93,32 @@ pub trait Visitor {
     }
 }
 
-macro_rules! visit_child {
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Ord, Copy, Eq)]
+pub struct AnyWalker<C>(PhantomData<C>);
+
+/// Define walker for `CustomNode`.
+pub trait CustomNodeWalker {
+    type Custom: CustomNode;
+    fn walk_custom_node_fields<VisitorImpl: Visitor<Self::Custom>>(
+        visitor: &mut VisitorImpl,
+        node: &mut Self::Custom,
+    ) -> bool;
+}
+
+impl<C> CustomNodeWalker for AnyWalker<C>
+where
+    C: CustomNode,
+{
+    type Custom = C;
+    fn walk_custom_node_fields<VisitorImpl: Visitor<Self::Custom>>(
+        _visitor: &mut VisitorImpl,
+        _node: &mut C,
+    ) -> bool {
+        true
+    }
+}
+
+macro_rules! visit_inner {
     ($self:ident.$visitor:ident.$method:ident($($tokens:tt)*)) => {
         if !$self.$visitor.$method($($tokens)*) {
             return false;
@@ -112,7 +139,7 @@ macro_rules! try_visit {
 /// `syn::visit_mut::VisitMut`.
 ///
 /// For regular usecases it is recommended to use `visit_nodes`,
-/// `visit_nodes_with_custom_handler` or `visit_attributes` functions.
+/// `visit_nodes_with_custom` or `visit_attributes` functions.
 ///
 /// But if you need it can be used by calling `visit_*` methods directly.
 ///
@@ -121,14 +148,13 @@ macro_rules! try_visit {
 /// use quote::quote;
 /// use rstml::{
 ///     node::{Node, NodeText},
-///     visitor::{Visitor, VisitorWithDefault},
+///     visitor::{Visitor, Walker},
 ///     Infallible,
 /// };
 /// use syn::parse_quote;
 ///
 /// struct TestVisitor;
-/// impl Visitor for TestVisitor {
-///     type Custom = Infallible;
+/// impl<C> Visitor<C> for TestVisitor {
 ///     fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
 ///         *node = parse_quote!("modified");
 ///         true
@@ -136,7 +162,7 @@ macro_rules! try_visit {
 /// }
 /// impl syn::visit_mut::VisitMut for TestVisitor {}
 ///
-/// let mut visitor = VisitorWithDefault::new(TestVisitor);
+/// let mut visitor = Walker::new(TestVisitor);
 ///
 /// let tokens = quote! {
 ///     <div>
@@ -162,40 +188,61 @@ macro_rules! try_visit {
 ///     .to_string()
 /// );
 /// ```
-pub struct VisitorWithDefault<C: CustomNode, V: Visitor + syn::visit_mut::VisitMut> {
-    custom: PhantomData<C>,
-    visitor: V,
-    custom_handler: Option<Box<dyn FnMut(&mut C) -> bool>>,
-}
-impl<C, V> VisitorWithDefault<C, V>
+pub struct Walker<V, C = Infallible, CW = AnyWalker<C>>
 where
     C: CustomNode,
-    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
+    CW: CustomNodeWalker<Custom = C>,
+{
+    visitor: V,
+    // we use callbakc instead of marker for `CustomNodeWalker`
+    // because it will fail to resolve with infinite recursion
+    walker: PhantomData<CW>,
+    _pd: PhantomData<C>,
+}
+
+impl<V, C> Walker<V, C>
+where
+    C: CustomNode,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
 {
     pub fn new(visitor: V) -> Self {
         Self {
-            custom: PhantomData,
             visitor,
-            custom_handler: None,
+            walker: PhantomData,
+            _pd: PhantomData,
         }
     }
-    pub fn with_custom_handler(visitor: V, handler: Box<dyn FnMut(&mut C) -> bool>) -> Self {
-        Self {
-            custom: PhantomData,
+    pub fn with_custom_handler<OtherCW>(visitor: V) -> Walker<V, C, OtherCW>
+    where
+        OtherCW: CustomNodeWalker<Custom = C>,
+    {
+        Walker {
             visitor,
-            custom_handler: Some(handler),
+            walker: PhantomData,
+            _pd: PhantomData,
         }
     }
 }
-
-impl<C, V> Visitor for VisitorWithDefault<C, V>
+impl<V, C, CW> Walker<V, C, CW>
 where
     C: CustomNode,
-    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
+    CW: CustomNodeWalker<Custom = C>,
 {
-    type Custom = C;
-    fn visit_node(&mut self, node: &mut Node<Self::Custom>) -> bool {
-        visit_child!(self.visitor.visit_node(node));
+    pub fn destruct(self) -> V {
+        self.visitor
+    }
+}
+
+impl<V, C, CW> Visitor<C> for Walker<V, C, CW>
+where
+    C: CustomNode,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
+    CW: CustomNodeWalker<Custom = C>,
+{
+    fn visit_node(&mut self, node: &mut Node<C>) -> bool {
+        visit_inner!(self.visitor.visit_node(node));
 
         match node {
             Node::Block(b) => self.visit_block(b),
@@ -209,7 +256,7 @@ where
         }
     }
     fn visit_block(&mut self, node: &mut NodeBlock) -> bool {
-        visit_child!(self.visitor.visit_block(node));
+        visit_inner!(self.visitor.visit_block(node));
 
         match node {
             NodeBlock::Invalid(b) => self.visit_invalid_block(b),
@@ -217,36 +264,32 @@ where
         }
     }
     fn visit_comment(&mut self, node: &mut NodeComment) -> bool {
-        visit_child!(self.visitor.visit_comment(node));
+        visit_inner!(self.visitor.visit_comment(node));
 
         self.visit_rust_code(RustCode::LitStr(&mut node.value))
     }
     fn visit_doctype(&mut self, node: &mut NodeDoctype) -> bool {
-        visit_child!(self.visitor.visit_doctype(node));
+        visit_inner!(self.visitor.visit_doctype(node));
 
         self.visit_raw_node(&mut node.value)
     }
     fn visit_raw_node<OtherC: CustomNode>(&mut self, node: &mut RawText<OtherC>) -> bool {
-        visit_child!(self.visitor.visit_raw_node(node));
+        visit_inner!(self.visitor.visit_raw_node(node));
 
         true
     }
-    fn visit_custom(&mut self, node: &mut Self::Custom) -> bool {
-        visit_child!(self.visitor.visit_custom(node));
+    fn visit_custom(&mut self, node: &mut C) -> bool {
+        visit_inner!(self.visitor.visit_custom(node));
 
-        if let Some(ref mut handler) = &mut self.custom_handler {
-            handler(node)
-        } else {
-            true
-        }
+        CW::walk_custom_node_fields(self, node)
     }
     fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
-        visit_child!(self.visitor.visit_text_node(node));
+        visit_inner!(self.visitor.visit_text_node(node));
 
         self.visit_rust_code(RustCode::LitStr(&mut node.value))
     }
-    fn visit_element(&mut self, node: &mut NodeElement<Self::Custom>) -> bool {
-        visit_child!(self.visitor.visit_element(node));
+    fn visit_element(&mut self, node: &mut NodeElement<C>) -> bool {
+        visit_inner!(self.visitor.visit_element(node));
 
         try_visit!(self.visit_open_tag(&mut node.open_tag));
 
@@ -262,8 +305,8 @@ where
         }
         true
     }
-    fn visit_fragment(&mut self, node: &mut NodeFragment<Self::Custom>) -> bool {
-        visit_child!(self.visitor.visit_fragment(node));
+    fn visit_fragment(&mut self, node: &mut NodeFragment<C>) -> bool {
+        visit_inner!(self.visitor.visit_fragment(node));
 
         for child in node.children_mut() {
             try_visit!(self.visit_node(child))
@@ -272,14 +315,14 @@ where
     }
 
     fn visit_open_tag(&mut self, open_tag: &mut OpenTag) -> bool {
-        visit_child!(self.visitor.visit_open_tag(open_tag));
+        visit_inner!(self.visitor.visit_open_tag(open_tag));
 
         try_visit!(self.visit_node_name(&mut open_tag.name));
 
         true
     }
     fn visit_close_tag(&mut self, closed_tag: &mut CloseTag) -> bool {
-        visit_child!(self.visitor.visit_close_tag(closed_tag));
+        visit_inner!(self.visitor.visit_close_tag(closed_tag));
 
         try_visit!(self.visit_node_name(&mut closed_tag.name));
 
@@ -287,7 +330,7 @@ where
     }
 
     fn visit_attribute(&mut self, attribute: &mut NodeAttribute) -> bool {
-        visit_child!(self.visitor.visit_attribute(attribute));
+        visit_inner!(self.visitor.visit_attribute(attribute));
 
         match attribute {
             NodeAttribute::Attribute(a) => self.visit_keyed_attribute(a),
@@ -295,7 +338,7 @@ where
         }
     }
     fn visit_keyed_attribute(&mut self, attribute: &mut KeyedAttribute) -> bool {
-        visit_child!(self.visitor.visit_keyed_attribute(attribute));
+        visit_inner!(self.visitor.visit_keyed_attribute(attribute));
 
         match &mut attribute.possible_value {
             KeyedAttributeValue::None => self.visit_attribute_flag(&mut attribute.key),
@@ -304,11 +347,11 @@ where
         }
     }
     fn visit_attribute_flag(&mut self, key: &mut NodeName) -> bool {
-        visit_child!(self.visitor.visit_attribute_flag(key));
+        visit_inner!(self.visitor.visit_attribute_flag(key));
         true
     }
     fn visit_attribute_binding(&mut self, key: &mut NodeName, value: &mut FnBinding) -> bool {
-        visit_child!(self.visitor.visit_attribute_binding(key, value));
+        visit_inner!(self.visitor.visit_attribute_binding(key, value));
 
         for input in value.inputs.iter_mut() {
             try_visit!(self.visit_rust_code(RustCode::Pat(input)))
@@ -320,19 +363,19 @@ where
         key: &mut NodeName,
         value: &mut AttributeValueExpr,
     ) -> bool {
-        visit_child!(self.visitor.visit_attribute_value(key, value));
+        visit_inner!(self.visitor.visit_attribute_value(key, value));
 
         self.visit_node_name(key);
         self.visit_rust_code(RustCode::Expr(&mut value.value))
     }
 
     fn visit_invalid_block(&mut self, block: &mut InvalidBlock) -> bool {
-        visit_child!(self.visitor.visit_invalid_block(block));
+        visit_inner!(self.visitor.visit_invalid_block(block));
 
         true
     }
     fn visit_node_name(&mut self, name: &mut NodeName) -> bool {
-        visit_child!(self.visitor.visit_node_name(name));
+        visit_inner!(self.visitor.visit_node_name(name));
 
         true
     }
@@ -345,7 +388,7 @@ where
                 RustCode::LitStr(l) => RustCode::LitStr(l),
                 RustCode::Pat(p) => RustCode::Pat(p),
             };
-            visit_child!(self.visitor.visit_rust_code(rewrap));
+            visit_inner!(self.visitor.visit_rust_code(rewrap));
         }
 
         match code {
@@ -365,14 +408,10 @@ where
 /// Return modified visitor back
 pub fn visit_nodes<V, C>(nodes: &mut [Node<C>], visitor: V) -> V
 where
-    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
-    <V as Visitor>::Custom: CustomNode,
+    C: CustomNode,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
 {
-    let mut visitor = VisitorWithDefault {
-        custom: PhantomData,
-        visitor,
-        custom_handler: None,
-    };
+    let mut visitor = Walker::<V, C>::new(visitor);
     for node in nodes {
         visitor.visit_node(node);
     }
@@ -387,20 +426,13 @@ where
 /// and call visitor methods for its children.
 ///
 /// Return modified visitor back
-pub fn visit_nodes_with_custom_handler<V, C>(
-    nodes: &mut [Node<C>],
-    handler: Box<dyn FnMut(&mut C) -> bool>,
-    visitor: V,
-) -> V
+pub fn visit_nodes_with_custom<V, C, CW>(nodes: &mut [Node<C>], visitor: V) -> V
 where
-    V: Visitor<Custom = C> + syn::visit_mut::VisitMut,
-    <V as Visitor>::Custom: CustomNode,
+    C: CustomNode,
+    V: Visitor<C> + syn::visit_mut::VisitMut,
+    CW: CustomNodeWalker<Custom = C>,
 {
-    let mut visitor = VisitorWithDefault {
-        custom: PhantomData,
-        visitor,
-        custom_handler: Some(handler),
-    };
+    let mut visitor = Walker::with_custom_handler::<CW>(visitor);
     for node in nodes {
         visitor.visit_node(node);
     }
@@ -410,13 +442,10 @@ where
 /// Visit attributes in array calling visitor methods.
 pub fn visit_attributes<V>(attributes: &mut [NodeAttribute], visitor: V) -> V
 where
-    V: Visitor<Custom = Infallible> + syn::visit_mut::VisitMut,
+    V: Visitor<Infallible> + syn::visit_mut::VisitMut,
+    Walker<V>: Visitor<Infallible>,
 {
-    let mut visitor = VisitorWithDefault {
-        custom: PhantomData,
-        visitor,
-        custom_handler: None,
-    };
+    let mut visitor = Walker::new(visitor);
     for attribute in attributes {
         visitor.visit_attribute(attribute);
     }
@@ -436,8 +465,7 @@ mod tests {
         struct TestVisitor {
             collected_names: Vec<NodeName>,
         }
-        impl Visitor for TestVisitor {
-            type Custom = Infallible;
+        impl<C: CustomNode> Visitor<C> for TestVisitor {
             fn visit_node_name(&mut self, name: &mut NodeName) -> bool {
                 self.collected_names.push(name.clone());
                 true
@@ -470,15 +498,48 @@ mod tests {
     }
 
     #[test]
+    fn collect_node_elements() {
+        #[derive(Default)]
+        struct TestVisitor {
+            collected_names: Vec<NodeName>,
+        }
+        impl<C: CustomNode> Visitor<C> for TestVisitor {
+            fn visit_element(&mut self, node: &mut NodeElement<C>) -> bool {
+                self.collected_names.push(node.open_tag.name.clone());
+                true
+            }
+        }
+        // empty impl
+        impl syn::visit_mut::VisitMut for TestVisitor {}
+
+        let stream = quote! {
+            <div>
+                <span></span>
+                <span></span>
+            </div>
+            <!-- "comment" -->
+            <foo attr key=value> </foo>
+        };
+        let mut nodes = crate::parse2(stream).unwrap();
+        let visitor = visit_nodes(&mut nodes, TestVisitor::default());
+        // convert node_names to string;
+        let node_names = visitor
+            .collected_names
+            .iter()
+            .map(|name| name.to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(node_names, vec!["div", "span", "span", "foo"]);
+    }
+
+    #[test]
     fn collect_rust_blocks() {
         #[derive(Default)]
         struct TestVisitor {
             collected_blocks: Vec<syn::Block>,
         }
         // empty impl
-        impl Visitor for TestVisitor {
-            type Custom = Infallible;
-        }
+        impl<C: CustomNode> Visitor<C> for TestVisitor {}
         impl syn::visit_mut::VisitMut for TestVisitor {
             fn visit_block_mut(&mut self, i: &mut syn::Block) {
                 self.collected_blocks.push(i.clone());
@@ -518,10 +579,8 @@ mod tests {
         struct TestVisitor {
             collected_raw_text: Vec<RawText<Infallible>>,
         }
-        impl Visitor for TestVisitor {
-            type Custom = Infallible;
-
-            fn visit_raw_node<OtherC: CustomNode>(&mut self, node: &mut RawText<OtherC>) -> bool {
+        impl<C: CustomNode> Visitor<C> for TestVisitor {
+            fn visit_raw_node<AnyC: CustomNode>(&mut self, node: &mut RawText<AnyC>) -> bool {
                 let raw = node.clone().convert_custom::<Infallible>();
                 self.collected_raw_text.push(raw);
                 true
@@ -560,9 +619,7 @@ mod tests {
         struct TestVisitor {
             collected_literals: Vec<syn::LitStr>,
         }
-        impl Visitor for TestVisitor {
-            type Custom = Infallible;
-        }
+        impl<C: CustomNode> Visitor<C> for TestVisitor {}
         impl syn::visit_mut::VisitMut for TestVisitor {
             fn visit_lit_str_mut(&mut self, i: &mut syn::LitStr) {
                 self.collected_literals.push(i.clone());
@@ -596,8 +653,7 @@ mod tests {
     #[test]
     fn modify_text_visitor() {
         struct TestVisitor;
-        impl Visitor for TestVisitor {
-            type Custom = Infallible;
+        impl<C: CustomNode> Visitor<C> for TestVisitor {
             fn visit_text_node(&mut self, node: &mut NodeText) -> bool {
                 *node = parse_quote!("modified");
                 true
@@ -605,7 +661,7 @@ mod tests {
         }
         impl syn::visit_mut::VisitMut for TestVisitor {}
 
-        let mut visitor = VisitorWithDefault::new(TestVisitor);
+        let mut visitor = Walker::new(TestVisitor);
 
         let tokens = quote! {
             <div>
