@@ -2,6 +2,8 @@
 //! This hack can be activated using feature = "rawtext-stable-hack", it has no
 //! penalty in nightly, or rust-analyzer but on stable it parses input two
 //! times.
+//! 
+//! In order to use this hack one should also init `Config::macro_call_pattern` in config.
 
 use proc_macro2::{Span, TokenStream, TokenTree};
 

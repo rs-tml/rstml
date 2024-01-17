@@ -56,13 +56,16 @@ impl<C: CustomNode> ParseRecoverable for NodeFragment<C> {
         let is_raw = |name| parser.config().raw_text_elements.contains(name);
 
         let (children, tag_close) = if is_raw("") {
-            let (child, closed_tag) =
-                parser.parse_with_ending(input, |_, t| RawText::from(t), FragmentClose::parse);
+            let (child, closed_tag) = parser.parse_with_conflict_ending(
+                input,
+                |_, t| RawText::from(t),
+                FragmentClose::parse,
+            );
 
             (vec![Node::<C>::RawText(child)], closed_tag)
         } else {
             let (child, close_tag_start) =
-                parser.parse_tokens_until_call::<Node<C>, _, _>(input, CloseTagStart::parse);
+                parser.parse_array_until_call::<Node<C>, _, _>(input, CloseTagStart::parse);
             (
                 child,
                 FragmentClose::parse_with_start_tag(parser, input, close_tag_start),
@@ -94,7 +97,7 @@ impl ParseRecoverable for NodeDoctype {
             return None;
         }
         let (value, token_end) =
-            parser.parse_with_ending(input, |_, t| RawText::from(t), <Token![>]>::parse);
+            parser.parse_with_conflict_ending(input, |_, t| RawText::from(t), <Token![>]>::parse);
 
         let token_end = token_end?;
         Some(Self {
@@ -141,16 +144,23 @@ impl ParseRecoverable for OpenTag {
         let name = parser.parse_simple(input)?;
         let generics = parser.parse_simple(input)?;
 
-        let (attributes, end_tag) = parser
-            .parse_tokens_with_conflicted_ending::<NodeAttribute, _, _>(
+        let (mut attributes, end) = parser
+            .parse_array_with_conflicted_ending::<NodeAttribute, _, _>(
                 input,
-                tokens::OpenTagEnd::parse,
+                tokens::OpenTagEnd::parse_with_optional_spread,
             );
 
-        if end_tag.is_none() {
+        if end.is_none() {
             parser.push_diagnostic(Diagnostic::new(Level::Error, "expected end of tag '>'"));
+            return None;
         }
-        end_tag.map(|end_tag| OpenTag {
+        let (spread, end_tag) = end.expect("end tag was checked to be Some");
+
+        if let Some((spread, name)) = spread {
+            let spread_attr = NodeAttribute::from_spread_parts(spread, name);
+            attributes.push(spread_attr);
+        }
+        Some(OpenTag {
             token_lt,
             name,
             generics,
@@ -176,7 +186,7 @@ impl<C: CustomNode> NodeElement<C> {
     ) -> Option<(Vec<Node<C>>, Option<CloseTag>)> {
         let (children, close_tag) = if raw {
             let (child, closed_tag) =
-                parser.parse_with_ending(input, |_, t| RawText::from(t), CloseTag::parse);
+                parser.parse_with_conflict_ending(input, |_, t| RawText::from(t), CloseTag::parse);
             // don't keep empty RawText
             let children = if !child.is_empty() {
                 vec![Node::RawText(child)]
@@ -189,7 +199,7 @@ impl<C: CustomNode> NodeElement<C> {
             // invalid closing tags.
             // Also parse only </ part to recover parser as soon as user types </
             let (children, close_tag) =
-                parser.parse_tokens_until_call::<Node<C>, _, _>(input, CloseTagStart::parse);
+                parser.parse_array_until_call::<Node<C>, _, _>(input, CloseTagStart::parse);
 
             let close_tag = CloseTag::parse_with_start_tag(parser, input, close_tag);
 

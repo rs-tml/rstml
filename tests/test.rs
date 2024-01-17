@@ -997,6 +997,67 @@ fn get_element<C: CustomNode>(nodes: &[Node<C>], element_index: usize) -> &NodeE
     element
 }
 
+// Buggy behaviour when firstly it is parsed as field and then as node name
+// Also field_attribute is only allowed at beginning, since later it can be treated as part of expresion.
+#[test]
+fn buggy_field_attr() {
+    let tokens = quote! {
+        <div::foo .field_syntax/>
+    };
+
+    let nodes = parse2(tokens).unwrap();
+    let attribute = get_element_attribute(&nodes, 0, 0);
+    assert_eq!(attribute.key.to_string(), "field_syntax");
+    assert!(attribute.prefix.has_dot());
+
+    let tokens = quote! {
+        <div .part_of_name/>
+    };
+
+    let nodes = parse2(tokens).unwrap();
+    let node = get_element(&nodes, 0);
+    assert_eq!(node.open_tag.name.to_string(), "div.part_of_name");
+
+    let tokens = quote! {
+        <div<Foo> .field_syntax/>
+    };
+
+    let nodes = parse2(tokens).unwrap();
+    let attribute = get_element_attribute(&nodes, 0, 0);
+    assert_eq!(attribute.key.to_string(), "field_syntax");
+
+    // To summarize:
+    let tokens = quote! {
+        <div.part_of_name<Foo> .field_syntax/>
+    };
+
+    let nodes = parse2(tokens).unwrap();
+
+    let node = get_element(&nodes, 0);
+    assert_eq!(node.open_tag.name.to_string(), "div.part_of_name");
+    let attribute = get_element_attribute(&nodes, 0, 0);
+    assert_eq!(attribute.key.to_string(), "field_syntax");
+}
+
+#[test]
+fn test_custom_punkts_in_attributes() {
+    let tokens = quote! {
+        <div .field_syntax="foo" @prefix_at="bar" dashed-option?="baz" ...spread />
+    };
+
+    let nodes = parse2(tokens).unwrap();
+
+    let attribute = get_element_attribute(&nodes, 0, 0);
+    assert_eq!(attribute.key.to_string(), "prefix_at");
+    assert!(attribute.prefix.has_handler());
+    let attribute = get_element_attribute(&nodes, 0, 1);
+    assert_eq!(attribute.key.to_string(), "dashed-option");
+    assert!(attribute.suffix.has_optional());
+    let attribute = get_element_attribute(&nodes, 0, 2);
+    assert_eq!(attribute.key.to_string(), "spread");
+    assert!(attribute.prefix.is_spread());
+}
+
 fn get_element_attribute<C: CustomNode>(
     nodes: &[Node<C>],
     element_index: usize,

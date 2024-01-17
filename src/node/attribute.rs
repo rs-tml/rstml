@@ -1,5 +1,5 @@
-use proc_macro2::TokenStream;
-use quote::ToTokens;
+use proc_macro2::{Punct, TokenStream, TokenTree};
+use quote::{ToTokens, TokenStreamExt};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
@@ -83,11 +83,16 @@ impl KeyedAttributeValue {
 /// key // attribute without value
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct KeyedAttribute {
+    /// Punctuation that was parsed before attribute name.
+    pub prefix: AttributeModifiers,
     /// Key of the element attribute.
     pub key: NodeName,
+    /// Punctuation that was parsed after attribute name.
+    pub suffix: AttributeModifiers,
     /// Value of the element attribute.
     pub possible_value: KeyedAttributeValue,
 }
+
 impl KeyedAttribute {
     ///
     /// Returns string representation of inner value,
@@ -211,11 +216,97 @@ pub enum NodeAttribute {
     /// - `<div attr(x: Type)>`
     Attribute(KeyedAttribute),
 }
+impl NodeAttribute {
+    pub(crate) fn parse_spread_parts(input: ParseStream) -> syn::Result<(Token![...], NodeName)> {
+        let spread = input.parse::<Token![...]>()?;
+        let name = NodeName::parse(input)?;
+        Ok((spread, name))
+    }
+    pub(crate) fn from_spread_parts(spread: Token![...], name: NodeName) -> Self {
+        let puncts = spread
+            .to_token_stream()
+            .into_iter()
+            .map(|t| {
+                let TokenTree::Punct(p) = t else {
+                    panic!("BUG: spread token should be punct, but got {:?}", t)
+                };
+                p
+            })
+            .collect();
+        NodeAttribute::Attribute(KeyedAttribute {
+            prefix: AttributeModifiers { puncts },
+            key: name,
+            suffix: AttributeModifiers { puncts: vec![] },
+            possible_value: KeyedAttributeValue::None,
+        })
+    }
+}
+
+/// Array of puncts that represents some attribute modifiers.
+///
+/// This struct also contain some getters for the most basic implementors.
+///
+/// Example of midifiers that has getters:
+/// - `?` - bind optional value to attribute
+/// - `!` - mark some attribute default value
+/// - `@` - handler of some event
+/// - `...` - spread fields from some struct as attributes
+#[derive(Clone, Debug, syn_derive::ToTokens)]
+pub struct AttributeModifiers {
+    #[to_tokens(TokenStreamExt::append_all)]
+    pub puncts: Vec<Punct>,
+}
+impl AttributeModifiers {
+    /// Returns true if any of modifiers contain `?` symbol.
+    pub fn has_optional(&self) -> bool {
+        self.puncts.iter().any(|p| p.as_char() == '?')
+    }
+    /// Returns true if any of modifiers contain `!` symbol.
+    pub fn has_required(&self) -> bool {
+        self.puncts.iter().any(|p| p.as_char() == '!')
+    }
+    /// Returns true if any of modifiers contain `@` symbol.
+    pub fn has_handler(&self) -> bool {
+        self.puncts.iter().any(|p| p.as_char() == '@')
+    }
+    /// Returns true if any of modifiers contain `.` symbol.
+    pub fn has_dot(&self) -> bool {
+        self.puncts.iter().any(|p| p.as_char() == '.')
+    }
+    /// Returns true if all modifiers equal to `...`.
+    /// Note: That while other modifiers can be combined, `...` can only be used alone.
+    pub fn is_spread(&self) -> bool {
+        self.puncts.len() == 3
+            && self.puncts[0].as_char() == '.'
+            && self.puncts[1].as_char() == '.'
+            && self.puncts[2].as_char() == '.'
+    }
+
+    // Peek any allowed punct
+    fn peek_punct(input: ParseStream) -> bool {
+        input.cursor().punct().is_some() && !input.peek(Token![-]) && !input.peek(Token![=])
+    }
+}
+
+impl Parse for AttributeModifiers {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut puncts = Vec::new();
+        // use cursor to peek any punkt
+        while Self::peek_punct(input) {
+            puncts.push(input.parse::<Punct>()?);
+        }
+
+        Ok(Self { puncts })
+    }
+}
 
 // Use custom parse to correct error.
 impl Parse for KeyedAttribute {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let prefix = AttributeModifiers::parse(input)?;
         let key = NodeName::parse(input)?;
+        let suffix = AttributeModifiers::parse(input)?;
+
         let possible_value = if input.peek(Paren) {
             KeyedAttributeValue::Binding(FnBinding::parse(input)?)
         } else if input.peek(Token![=]) {
@@ -244,7 +335,9 @@ impl Parse for KeyedAttribute {
             KeyedAttributeValue::None
         };
         Ok(KeyedAttribute {
+            prefix,
             key,
+            suffix,
             possible_value,
         })
     }

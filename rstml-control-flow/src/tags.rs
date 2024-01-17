@@ -176,7 +176,7 @@ impl ParseRecoverable for ForNode {
             // invalid closing tags.
             // Also parse only </ part to recover parser as soon as user types </
             let (children, close_tag) =
-                parser.parse_tokens_until_call::<Node, _, _>(input, CloseTagStart::parse);
+                parser.parse_array_until_call::<Node, _, _>(input, CloseTagStart::parse);
 
             let close_tag = atoms::CloseTag::parse_with_start_tag(parser, input, close_tag);
             (children, close_tag)
@@ -210,7 +210,7 @@ impl ParseRecoverable for ElseIfNode {
             // invalid closing tags.
             // Also parse only </ part to recover parser as soon as user types </
             let (children, close_tag) =
-                parser.parse_tokens_until_call::<Node, _, _>(input, CloseTagStart::parse);
+                parser.parse_array_until_call::<Node, _, _>(input, CloseTagStart::parse);
 
             let close_tag = ElseIfCloseTag::parse_with_start_tag(parser, input, close_tag);
             (children, close_tag)

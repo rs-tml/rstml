@@ -3,9 +3,15 @@ use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     spanned::Spanned,
+    Token,
 };
 
-use crate::recoverable::{ParseRecoverable, RecoverableContext};
+use crate::{
+    atoms::tokens,
+    recoverable::{ParseRecoverable, RecoverableContext},
+};
+
+use super::{NodeAttribute, NodeName};
 
 impl RecoverableContext {
     /// Like [`parse_simple`], but splits the tokenstream at `E` first only
@@ -57,11 +63,11 @@ impl RecoverableContext {
     /// Example:
     /// ```ignore
     /// # use syn::{parse::{Parser, ParseStream}, Ident, Result, parse_macro_input, Token};
-    /// # use rstml::{parse_tokens_until};
+    /// # use rstml::{parse_array_until};
     /// # fn main() -> syn::Result<()>{
     /// let tokens:proc_macro2::TokenStream = quote::quote!(few idents seperated by spaces and then minus sign - that will stop parsing).into();
     /// let concat_idents_without_minus = |input: ParseStream| -> Result<String> {
-    ///     let (idents, _minus) = parser.parse_tokens_until::<Ident, _, _>(input, |i|
+    ///     let (idents, _minus) = parser.parse_array_until::<Ident, _, _>(input, |i|
     ///         i.parse::<Token![-]>()
     ///     )?;
     ///     let mut new_str = String::new();
@@ -79,7 +85,7 @@ impl RecoverableContext {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn parse_tokens_until_call<T, F, U>(
+    pub fn parse_array_until_call<T, F, U>(
         &mut self,
         input: ParseStream,
         stop_fn: F,
@@ -109,7 +115,7 @@ impl RecoverableContext {
     /// Two-phase parsing, firstly find separator, and then parses array of
     /// tokens before separator.
     /// For simple input this method will work like
-    /// `parse_tokens_until`.
+    /// `parse_array_until`.
     /// Internally it creates intermediate `TokenStream`` and
     /// copy of all tokens until separator token is found. It is usefull
     /// when separator (or it's part) can be treated as part of token T.
@@ -126,7 +132,7 @@ impl RecoverableContext {
     /// In this example "<" can can be parsed as part of expression, but we want
     /// to split tokens after "<>" was found. So instead of parsing all
     /// input as expression, firstly we need to seperate it into two chunks.
-    pub fn parse_tokens_with_conflicted_ending<T, F, U>(
+    pub fn parse_array_with_conflicted_ending<T, F, U>(
         &mut self,
         input: ParseStream,
         separator: F,
@@ -161,10 +167,11 @@ impl RecoverableContext {
             }
             collection
         };
-        self.parse_with_ending(input, parser, separator)
+        self.parse_with_conflict_ending(input, parser, separator)
     }
 
-    pub(crate) fn parse_with_ending<F, CNV, V, U>(
+    /// Two-phase parsing, firstly find separator, and then call `parse_fn` to parse element.
+    pub(crate) fn parse_with_conflict_ending<F, CNV, V, U>(
         &mut self,
         input: ParseStream,
         parser: CNV,
@@ -195,5 +202,19 @@ impl RecoverableContext {
             tokens.extend([next]);
         };
         (parser(self, tokens), res)
+    }
+}
+
+impl tokens::OpenTagEnd {
+    pub(crate) fn parse_with_optional_spread(
+        input: ParseStream,
+    ) -> syn::Result<(Option<(Token![...], NodeName)>, Self)> {
+        let spread = if input.peek(Token![...]) {
+            Some(NodeAttribute::parse_spread_parts(input)?)
+        } else {
+            None
+        };
+        let end_tag = input.parse::<Self>()?;
+        Ok((spread, end_tag))
     }
 }

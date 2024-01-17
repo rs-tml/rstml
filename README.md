@@ -86,6 +86,7 @@ implementation and therefore can be used to pretty print html node.
   - Only valid Rust TokenStream can be unquoted text (no single quote text is supported, no unclosed braces, etc.)
   - Unquoted text not always can save spaces. It uses [`Span::source_text`] and [`Span::join`] to retrive info about spaces, and it is not always available.
   - Quoted text near unquoted treated as diferent Node, end library user should decide whenever to preserve quotation.
+  - There is feature "rawtext-stable-hack" that allows to use unquoted text in stable rust.
 
   ```html
   <div> Some string that is valid rust token stream </div>
@@ -96,6 +97,7 @@ implementation and therefore can be used to pretty print html node.
   ```html
   <tag-name some:attribute-key="value" />
   <tag::name attribute::key="value" />
+  <--custom-tag attribute::key="value" />
   ```
 
 - **Node names with reserved keywords**
@@ -151,6 +153,20 @@ implementation and therefore can be used to pretty print html node.
      | |__________________^
      
   ```
+
+  Note: full spans is only available when `join_spans` feature is available (at now only in nightly rust).
+
+- **Self closed tags**
+
+Set of self closed tags (like `<br>` or `<hr>`) can be configured during parsing.
+
+So syntax like this will be valid:
+
+```html
+Let it be<br> new line
+```
+
+See [always_self_closed_elements](https://docs.rs/rstml/latest/rstml/struct.ParserConfig.html#method.always_self_closed_elements) for more details.
 
 - **Recoverable parser**
 
