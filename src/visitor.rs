@@ -91,6 +91,13 @@ pub trait Visitor<Custom> {
     ) -> bool {
         true
     }
+    fn visit_attribute_block(
+        &mut self,
+        _key: &mut NodeName,
+        _value: &mut AttributeValueBlock,
+    ) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Ord, Copy, Eq)]
@@ -344,6 +351,7 @@ where
             KeyedAttributeValue::None => self.visit_attribute_flag(&mut attribute.key),
             KeyedAttributeValue::Binding(b) => self.visit_attribute_binding(&mut attribute.key, b),
             KeyedAttributeValue::Value(v) => self.visit_attribute_value(&mut attribute.key, v),
+            KeyedAttributeValue::Block(b) => self.visit_attribute_block(&mut attribute.key, b),
         }
     }
     fn visit_attribute_flag(&mut self, key: &mut NodeName) -> bool {
@@ -367,6 +375,16 @@ where
 
         self.visit_node_name(key);
         self.visit_rust_code(RustCode::Expr(&mut value.value))
+    }
+    fn visit_attribute_block(
+        &mut self,
+        key: &mut NodeName,
+        value: &mut AttributeValueBlock,
+    ) -> bool {
+        visit_inner!(self.visitor.visit_attribute_block(key, value));
+
+        self.visit_node_name(key);
+        self.visit_block(&mut value.value)
     }
 
     fn visit_invalid_block(&mut self, block: &mut InvalidBlock) -> bool {
