@@ -5,7 +5,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::{Brace, Comma, Paren},
-    Attribute, Expr, Lit, Pat, PatType, Token,
+    Attribute, Block, Expr, Lit, Pat, PatType, Token,
 };
 
 use crate::{
@@ -60,9 +60,16 @@ impl AttributeValueExpr {
 }
 
 #[derive(Clone, Debug, syn_derive::ToTokens)]
+pub struct AttributeValueBlock {
+    pub token_eq: Token![=],
+    pub value: NodeBlock,
+}
+
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum KeyedAttributeValue {
     Binding(FnBinding),
     Value(AttributeValueExpr),
+    Block(AttributeValueBlock),
     None,
 }
 
@@ -72,6 +79,7 @@ impl KeyedAttributeValue {
             KeyedAttributeValue::Value(v) => Some(v),
             KeyedAttributeValue::None => None,
             KeyedAttributeValue::Binding(_) => None,
+            KeyedAttributeValue::Block(_) => None,
         }
     }
 }
@@ -250,12 +258,76 @@ impl Parse for KeyedAttribute {
     }
 }
 
+impl ParseRecoverable for KeyedAttribute {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+        // TODO: Make this function actually recoverable
+
+        let key = NodeName::parse(input)
+            .map_err(|e| parser.push_diagnostic(e))
+            .ok()?;
+
+        let possible_value = if input.peek(Paren) {
+            KeyedAttributeValue::Binding(
+                FnBinding::parse(input)
+                    .map_err(|e| parser.push_diagnostic(e))
+                    .ok()?,
+            )
+        } else if input.peek(Token![=]) {
+            let eq = input
+                .parse::<Token![=]>()
+                .map_err(|e| parser.push_diagnostic(e))
+                .ok()?;
+            if input.is_empty() {
+                parser.push_diagnostic(syn::Error::new(eq.span(), "missing attribute value"));
+                return None;
+            }
+
+            let fork = input.fork();
+            if let Some(res) = parser.parse_recoverable::<NodeBlock>(&fork) {
+                input.advance_to(&fork);
+                KeyedAttributeValue::Block(AttributeValueBlock {
+                    token_eq: eq,
+                    value: res,
+                })
+            } else {
+                let res = fork
+                    .parse::<Expr>()
+                    .map_err(|e| {
+                        // if we stuck on end of input, span that is created will be call_site, so
+                        // we need to correct it, in order to make it more
+                        // IDE friendly.
+                        if fork.is_empty() {
+                            KeyedAttribute::correct_expr_error_span(e, input)
+                        } else {
+                            e
+                        }
+                    })
+                    .map_err(|e| parser.push_diagnostic(e))
+                    .ok()?;
+
+                input.advance_to(&fork);
+                KeyedAttributeValue::Value(AttributeValueExpr {
+                    token_eq: eq,
+                    value: res,
+                })
+            }
+        } else {
+            KeyedAttributeValue::None
+        };
+
+        Some(KeyedAttribute {
+            key,
+            possible_value,
+        })
+    }
+}
+
 impl ParseRecoverable for NodeAttribute {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         let node = if input.peek(Brace) {
             NodeAttribute::Block(parser.parse_recoverable(input)?)
         } else {
-            NodeAttribute::Attribute(parser.parse_simple(input)?)
+            NodeAttribute::Attribute(parser.parse_recoverable(input)?)
         };
         Some(node)
     }
