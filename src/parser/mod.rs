@@ -25,6 +25,14 @@ pub struct Parser<C> {
     config: ParserConfig<C>,
 }
 
+impl Default for Parser<Infallible> {
+    fn default() -> Self {
+        Self {
+            config: ParserConfig::default(),
+        }
+    }
+}
+
 impl<C: CustomNode + std::fmt::Debug> Parser<C> {
     /// Create a new parser with the given [`ParserConfig`].
     pub fn new(config: ParserConfig<C>) -> Self {
