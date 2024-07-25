@@ -553,16 +553,6 @@ mod tests {
     }
 
     #[test]
-    fn asd() {
-        let a = quote! {
-            <MyComponent style={{width: "20vw"}} />
-        };
-
-        let a = crate::parse2(a);
-        dbg!(a);
-    }
-
-    #[test]
     fn collect_rust_blocks() {
         #[derive(Default)]
         struct TestVisitor {
