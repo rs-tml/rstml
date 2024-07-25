@@ -375,7 +375,7 @@ where
         self.visit_node_name(key);
         match &mut value.value {
             KVAttributeValue::Expr(expr) => self.visit_rust_code(RustCode::Expr(expr)),
-            KVAttributeValue::Braced(braced) => self.visit_invalid_block(braced),
+            KVAttributeValue::InvalidBraced(braced) => self.visit_invalid_block(braced),
         }
     }
     fn visit_attribute_block(
