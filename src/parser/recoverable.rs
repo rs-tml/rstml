@@ -191,6 +191,7 @@ impl RecoverableContext {
 
 ///
 /// Result of parsing.
+#[derive(Debug)]
 pub enum ParsingResult<T> {
     /// Fully valid ast that was parsed without errors.
     Ok(T),

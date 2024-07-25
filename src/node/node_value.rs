@@ -8,9 +8,9 @@ use syn::{token::Brace, Block};
 #[derive(Clone, Debug, syn_derive::ToTokens, syn_derive::Parse)]
 pub struct InvalidBlock {
     #[syn(braced)]
-    brace: Brace,
+    pub brace: Brace,
     #[syn(in = brace)]
-    body: TokenStream,
+    pub body: TokenStream,
 }
 
 /// Block node.
