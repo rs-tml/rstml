@@ -24,7 +24,7 @@ pub struct AttributeValueExpr {
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum KVAttributeValue {
     Expr(Expr),
-    Braced(InvalidBlock),
+    InvalidBraced(InvalidBlock),
 }
 
 impl AttributeValueExpr {
@@ -140,7 +140,7 @@ impl KeyedAttribute {
             .to_value()
             .map(|v| match &v.value {
                 KVAttributeValue::Expr(expr) => Some(expr),
-                KVAttributeValue::Braced(_) => None,
+                KVAttributeValue::InvalidBraced(_) => None,
             })
             .flatten()
     }
@@ -265,7 +265,7 @@ impl ParseRecoverable for KeyedAttribute {
 
                 Err(_) if input.fork().peek(Brace) => {
                     let ivb = parser.parse_simple(input)?;
-                    KVAttributeValue::Braced(ivb)
+                    KVAttributeValue::InvalidBraced(ivb)
                 }
                 Err(_) => {
                     let res = fork
