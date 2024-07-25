@@ -10,7 +10,7 @@ Similar to JSX but for Rust (commonly named RSX).The parsed result is a nested `
 
 The fork of original [syn-rsx](https://github.com/stoically/syn-rsx) repo.
 It was created because of various reasons:
-- The author of original `syn-rsx` retired, end left new features without attention https://github.com/stoically/syn-rsx/issues/49
+- The author of original `syn-rsx` [have passed away](https://github.com/stoically/temporary-containers/issues/618).
 - Syn v2 was released and `syn-rsx` need to be mooved to new version.
 - The idea of [lossless parsing](https://github.com/stoically/syn-rsx/issues/53) was left unattended.
 - [Unquoted text](https://github.com/stoically/syn-rsx/issues/2) feature should advance.
