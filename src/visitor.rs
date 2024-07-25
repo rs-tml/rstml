@@ -351,7 +351,6 @@ where
             KeyedAttributeValue::None => self.visit_attribute_flag(&mut attribute.key),
             KeyedAttributeValue::Binding(b) => self.visit_attribute_binding(&mut attribute.key, b),
             KeyedAttributeValue::Value(v) => self.visit_attribute_value(&mut attribute.key, v),
-            KeyedAttributeValue::Block(b) => self.visit_attribute_block(&mut attribute.key, b),
         }
     }
     fn visit_attribute_flag(&mut self, key: &mut NodeName) -> bool {
@@ -374,7 +373,10 @@ where
         visit_inner!(self.visitor.visit_attribute_value(key, value));
 
         self.visit_node_name(key);
-        self.visit_rust_code(RustCode::Expr(&mut value.value))
+        match &mut value.value {
+            KVAttributeValue::Expr(expr) => self.visit_rust_code(RustCode::Expr(expr)),
+            KVAttributeValue::Braced(braced) => self.visit_invalid_block(braced),
+        }
     }
     fn visit_attribute_block(
         &mut self,
@@ -548,6 +550,16 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(node_names, vec!["div", "span", "span", "foo"]);
+    }
+
+    #[test]
+    fn asd() {
+        let a = quote! {
+            <MyComponent style={{width: "20vw"}} />
+        };
+
+        let a = crate::parse2(a);
+        dbg!(a);
     }
 
     #[test]

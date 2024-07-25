@@ -2,12 +2,14 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
+    parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{Brace, Comma, Paren},
-    Attribute, Block, Expr, Lit, Pat, PatType, Token,
+    Attribute, Expr, Lit, Pat, PatType, Token,
 };
 
+use super::{parse::parse_valid_block_expr, InvalidBlock};
 use crate::{
     node::{NodeBlock, NodeName},
     parser::recoverable::{ParseRecoverable, RecoverableContext},
@@ -16,8 +18,15 @@ use crate::{
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct AttributeValueExpr {
     pub token_eq: Token![=],
-    pub value: Expr,
+    pub value: KVAttributeValue,
 }
+
+#[derive(Clone, Debug, syn_derive::ToTokens)]
+pub enum KVAttributeValue {
+    Expr(Expr),
+    Braced(InvalidBlock),
+}
+
 impl AttributeValueExpr {
     ///
     /// Returns string representation of inner value,
@@ -46,7 +55,7 @@ impl AttributeValueExpr {
     /// Adapted from leptos
     pub fn value_literal_string(&self) -> Option<String> {
         match &self.value {
-            Expr::Lit(l) => match &l.lit {
+            KVAttributeValue::Expr(Expr::Lit(l)) => match &l.lit {
                 Lit::Str(s) => Some(s.value()),
                 Lit::Char(c) => Some(c.value().to_string()),
                 Lit::Int(i) => Some(i.base10_digits().to_string()),
@@ -69,7 +78,6 @@ pub struct AttributeValueBlock {
 pub enum KeyedAttributeValue {
     Binding(FnBinding),
     Value(AttributeValueExpr),
-    Block(AttributeValueBlock),
     None,
 }
 
@@ -79,7 +87,6 @@ impl KeyedAttributeValue {
             KeyedAttributeValue::Value(v) => Some(v),
             KeyedAttributeValue::None => None,
             KeyedAttributeValue::Binding(_) => None,
-            KeyedAttributeValue::Block(_) => None,
         }
     }
 }
@@ -129,7 +136,13 @@ impl KeyedAttribute {
     }
 
     pub fn value(&self) -> Option<&Expr> {
-        self.possible_value.to_value().map(|v| &v.value)
+        self.possible_value
+            .to_value()
+            .map(|v| match &v.value {
+                KVAttributeValue::Expr(expr) => Some(expr),
+                KVAttributeValue::Braced(_) => None,
+            })
+            .flatten()
     }
 
     // Checks if error is about eof.
@@ -220,48 +233,8 @@ pub enum NodeAttribute {
     Attribute(KeyedAttribute),
 }
 
-// Use custom parse to correct error.
-impl Parse for KeyedAttribute {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let key = NodeName::parse(input)?;
-        let possible_value = if input.peek(Paren) {
-            KeyedAttributeValue::Binding(FnBinding::parse(input)?)
-        } else if input.peek(Token![=]) {
-            let eq = input.parse::<Token![=]>()?;
-            if input.is_empty() {
-                return Err(syn::Error::new(eq.span(), "missing attribute value"));
-            }
-
-            let fork = input.fork();
-            let res = fork.parse::<Expr>().map_err(|e| {
-                // if we stuck on end of input, span that is created will be call_site, so we
-                // need to correct it, in order to make it more IDE friendly.
-                if fork.is_empty() {
-                    KeyedAttribute::correct_expr_error_span(e, input)
-                } else {
-                    e
-                }
-            })?;
-
-            input.advance_to(&fork);
-            KeyedAttributeValue::Value(AttributeValueExpr {
-                token_eq: eq,
-                value: res,
-            })
-        } else {
-            KeyedAttributeValue::None
-        };
-        Ok(KeyedAttribute {
-            key,
-            possible_value,
-        })
-    }
-}
-
 impl ParseRecoverable for KeyedAttribute {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
-        // TODO: Make this function actually recoverable
-
         let key = NodeName::parse(input)
             .map_err(|e| parser.push_diagnostic(e))
             .ok()?;
@@ -283,34 +256,42 @@ impl ParseRecoverable for KeyedAttribute {
             }
 
             let fork = input.fork();
-            if let Some(res) = parser.parse_recoverable::<NodeBlock>(&fork) {
-                input.advance_to(&fork);
-                KeyedAttributeValue::Block(AttributeValueBlock {
-                    token_eq: eq,
-                    value: res,
-                })
-            } else {
-                let res = fork
-                    .parse::<Expr>()
-                    .map_err(|e| {
-                        // if we stuck on end of input, span that is created will be call_site, so
-                        // we need to correct it, in order to make it more
-                        // IDE friendly.
-                        if fork.is_empty() {
-                            KeyedAttribute::correct_expr_error_span(e, input)
-                        } else {
-                            e
-                        }
-                    })
-                    .map_err(|e| parser.push_diagnostic(e))
-                    .ok()?;
 
-                input.advance_to(&fork);
-                KeyedAttributeValue::Value(AttributeValueExpr {
-                    token_eq: eq,
-                    value: res,
-                })
-            }
+            let rs = match parse_valid_block_expr(parser, &fork) {
+                Ok(vbl) => {
+                    input.advance_to(&fork);
+                    KVAttributeValue::Expr(parse_quote!(#vbl))
+                }
+
+                Err(_) if input.fork().peek(Brace) => {
+                    let ivb = parser.parse_simple(input)?;
+                    KVAttributeValue::Braced(ivb)
+                }
+                Err(_) => {
+                    let res = fork
+                        .parse::<Expr>()
+                        .map_err(|e| {
+                            // if we stuck on end of input, span that is created will be call_site,
+                            // so we need to correct it, in order to
+                            // make it more IDE friendly.
+                            if fork.is_empty() {
+                                KeyedAttribute::correct_expr_error_span(e, input)
+                            } else {
+                                e
+                            }
+                        })
+                        .map_err(|e| parser.push_diagnostic(e))
+                        .ok()?;
+
+                    input.advance_to(&fork);
+                    KVAttributeValue::Expr(res)
+                }
+            };
+
+            KeyedAttributeValue::Value(AttributeValueExpr {
+                token_eq: eq,
+                value: rs,
+            })
         } else {
             KeyedAttributeValue::None
         };

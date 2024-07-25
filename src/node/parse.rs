@@ -358,7 +358,7 @@ fn block_transform(input: ParseStream, transform_fn: &TransformBlockFn) -> syn::
 }
 
 #[allow(clippy::needless_pass_by_ref_mut)]
-fn parse_valid_block_expr(
+pub(crate) fn parse_valid_block_expr(
     parser: &mut RecoverableContext,
     input: syn::parse::ParseStream,
 ) -> syn::Result<Block> {
