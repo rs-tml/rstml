@@ -69,12 +69,6 @@ impl AttributeValueExpr {
 }
 
 #[derive(Clone, Debug, syn_derive::ToTokens)]
-pub struct AttributeValueBlock {
-    pub token_eq: Token![=],
-    pub value: NodeBlock,
-}
-
-#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub enum KeyedAttributeValue {
     Binding(FnBinding),
     Value(AttributeValueExpr),
@@ -263,7 +257,8 @@ impl ParseRecoverable for KeyedAttribute {
                     KVAttributeValue::Expr(parse_quote!(#vbl))
                 }
 
-                Err(_) if input.fork().peek(Brace) => {
+                Err(err) if input.fork().peek(Brace) && parser.config().recover_block => {
+                    parser.push_diagnostic(err);
                     let ivb = parser.parse_simple(input)?;
                     KVAttributeValue::InvalidBraced(ivb)
                 }

@@ -5,8 +5,8 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use rstml::{
     node::{
-        CustomNode, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute, NodeElement,
-        NodeName, NodeType,
+        CustomNode, KVAttributeValue, KeyedAttribute, KeyedAttributeValue, Node, NodeAttribute,
+        NodeElement, NodeName, NodeType,
     },
     parse2,
     recoverable::{ParseRecoverable, RecoverableContext},
@@ -971,6 +971,73 @@ fn test_single_element_with_different_attributes() -> Result<()> {
         assert!(attribute.value_literal_string().is_none());
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_invalid_blocks() -> Result<()> {
+    // test that invalid blocks can be parsed in recoverable mode
+    // usefull for IDEs
+    let tokens = quote! {
+        <foo>{block.} </foo>
+    };
+
+    let config = ParserConfig::new().recover_block(true);
+    let (nodes, diagnostics) = Parser::new(config)
+        .parse_recoverable(tokens.clone())
+        .split_vec();
+
+    let Node::Block(block) = get_element_child(&nodes, 0, 0) else {
+        panic!("expected block")
+    };
+
+    assert_eq!(block.to_token_stream().to_string(), "{ block . }");
+    assert_eq!(diagnostics.len(), 1);
+    let dbg_diag = format!("{:?}", diagnostics[0]);
+    assert!(dbg_diag.contains("unexpected end of input, expected identifier or integer"));
+    // same should not work if recover_block = false
+    let config = ParserConfig::new();
+    let (nodes, diagnostics) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let node = get_element(&nodes, 0);
+    assert!(node.children.is_empty());
+    // TODO: Cleanup errors
+    assert!(diagnostics.len() > 1);
+    Ok(())
+}
+
+#[test]
+fn test_invalid_blocks_in_attr() -> Result<()> {
+    // test that invalid blocks can be parsed in recoverable mode
+    // usefull for IDEs
+    let tokens = quote! {
+        <foo foo={block.}> </foo>
+    };
+
+    let config = ParserConfig::new().recover_block(true);
+    let (nodes, diagnostics) = Parser::new(config)
+        .parse_recoverable(tokens.clone())
+        .split_vec();
+
+    let attr = get_element_attribute(&nodes, 0, 0);
+    let KeyedAttributeValue::Value(eq_val) = &attr.possible_value else {
+        panic!("expected value")
+    };
+
+    let KVAttributeValue::InvalidBraced(block) = &eq_val.value else {
+        panic!("expected invalid block")
+    };
+
+    assert_eq!(block.to_token_stream().to_string(), "{ block . }");
+
+    assert_eq!(diagnostics.len(), 1);
+    let dbg_diag = format!("{:?}", diagnostics[0]);
+    assert!(dbg_diag.contains("unexpected end of input, expected identifier or integer"));
+    // same should not work if recover_block = false
+    let config = ParserConfig::new();
+    let (nodes, diagnostics) = Parser::new(config).parse_recoverable(tokens).split_vec();
+    let node = get_element(&nodes, 0);
+    assert!(node.attributes().is_empty());
+    assert_eq!(diagnostics.len(), 1);
     Ok(())
 }
 

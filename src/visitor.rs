@@ -91,13 +91,6 @@ pub trait Visitor<Custom> {
     ) -> bool {
         true
     }
-    fn visit_attribute_block(
-        &mut self,
-        _key: &mut NodeName,
-        _value: &mut AttributeValueBlock,
-    ) -> bool {
-        true
-    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, Ord, Copy, Eq)]
@@ -377,16 +370,6 @@ where
             KVAttributeValue::Expr(expr) => self.visit_rust_code(RustCode::Expr(expr)),
             KVAttributeValue::InvalidBraced(braced) => self.visit_invalid_block(braced),
         }
-    }
-    fn visit_attribute_block(
-        &mut self,
-        key: &mut NodeName,
-        value: &mut AttributeValueBlock,
-    ) -> bool {
-        visit_inner!(self.visitor.visit_attribute_block(key, value));
-
-        self.visit_node_name(key);
-        self.visit_block(&mut value.value)
     }
 
     fn visit_invalid_block(&mut self, block: &mut InvalidBlock) -> bool {

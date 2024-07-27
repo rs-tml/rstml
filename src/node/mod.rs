@@ -16,8 +16,8 @@ mod parser_ext;
 mod raw_text;
 
 pub use attribute::{
-    AttributeValueBlock, AttributeValueExpr, FnBinding, KVAttributeValue, KeyedAttribute,
-    KeyedAttributeValue, NodeAttribute,
+    AttributeValueExpr, FnBinding, KVAttributeValue, KeyedAttribute, KeyedAttributeValue,
+    NodeAttribute,
 };
 pub use node_name::{NodeName, NodeNameFragment};
 pub use node_value::{InvalidBlock, NodeBlock};
