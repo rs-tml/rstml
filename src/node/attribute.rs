@@ -304,7 +304,10 @@ impl Parse for AttributeModifiers {
 impl Parse for KeyedAttribute {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let prefix = AttributeModifiers::parse(input)?;
+        println!("prefix: {:?}", prefix);
         let key = NodeName::parse(input)?;
+
+        println!("key: {:?}", key);
         let suffix = AttributeModifiers::parse(input)?;
 
         let possible_value = if input.peek(Paren) {

@@ -1010,6 +1010,8 @@ fn buggy_field_attr() {
     assert_eq!(attribute.key.to_string(), "field_syntax");
     assert!(attribute.prefix.has_dot());
 
+    // This syntax is ambiguous.
+
     let tokens = quote! {
         <div .part_of_name/>
     };
@@ -1040,9 +1042,9 @@ fn buggy_field_attr() {
 }
 
 #[test]
-fn test_custom_punkts_in_attributes() {
+fn test_custom_puncts_in_attributes() {
     let tokens = quote! {
-        <div .field_syntax="foo" @prefix_at="bar" dashed-option?="baz" ...spread />
+        <div @prefix_at="bar" dashed-option?="baz" ...spread />
     };
 
     let nodes = parse2(tokens).unwrap();
