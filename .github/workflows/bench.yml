@@ -9,10 +9,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: critcmp
+      - name: Download and install critcmp
+        run: cargo install critcmp
+      - name: Run bench on current branch
+        run: cargo bench -p rstml --bench bench -- --save-baseline changes
+      - name: Run bench on main branch
         run: |
-          cargo install critcmp
-          cargo bench -- --save-baseline changes
           git checkout main
-          cargo bench -- --save-baseline main
-          critcmp main changes
+          cargo bench -p rstml --bench bench -- --save-baseline main
+      - name: Compare the results
+        run: critcmp main changes

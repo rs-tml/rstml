@@ -1,18 +1,24 @@
 [package]
 name = "rstml-control-flow"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+keywords.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+include.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-proc-macro2 = "1.0.47"
-quote = "1.0.21"
-syn = "2.0.15"
-syn_derive = "0.1"
-rstml = { version = "0.11.0", path = "../", features = ["rawtext-stable-hack"] }
-proc-macro2-diagnostics = "0.10"
-derive-where = "1.2.5"
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
+syn_derive.workspace = true
+proc-macro2-diagnostics.workspace = true
+derive-where.workspace = true
+rstml = { workspace = true, features = ["rawtext-stable-hack"] }
 
 [features]
 default = []
