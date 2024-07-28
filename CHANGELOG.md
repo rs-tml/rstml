@@ -2,7 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.11.2] - 2023-08-14
+## [0.12.0] - 2024-07-28
+
+### Chore
+
+- Fix ci
+- Fix clippy
+- Add example of custom node to html-to-string-macro.
+- Add eq and partial eq implementation.
+- Move custom node implementation to separate crate.
+- Refactor CustomNode trait
+- Add readme to rstml-controll-flow
+- Refine visitor api (remove clone/debug bounds)
+- Add custom node visitor implementation
+- Apply fmt/tests
+- Refactor custom node visitor.
+- Refactor code coverage script.
+
+### Features
+
+- Support for custom node
+- Parsing utilities for custom nodes
+- Add macro matcher
+- Add visitor api.
+- Implement extendable custom node
+
+### Fix
+
+- Fix imports in example
+- Empty input parsing
+- Make Recoverable field public.
+- Fix spelling mistake "witespace" to "whitespace"
+- Add unquoted text custom node integration
+- Use config and diagnostc from invalid_block in attribute place.
+
+### Other
+
+- Use example from inline docs in readme
+- Address review
+
+- Allow multiple puncts in a row in NodeName
+- Added test for consecutive punctuation in NodeName
+
+Signed-off-by: max <gmx.sht@gmail.com>
+
+- Update README.md
+- Default impl for Parser ([#51](https://github.com/rs-tml/rstml/issues/51))
+
+- Initial implementation of block attributes
+
+- Implement braced key value attribute. See also: [#54](https://github.com/rs-tml/rstml/issues/54#issuecomment-2247924159)
+
+- Remove scratch
+
+- Rename KVAttributeValue::Braced -> KVAttributeValue::InvalidBraced
+
+
+## [0.11.1] - 2023-08-14
 
 ### Chore
 
