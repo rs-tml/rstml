@@ -19,19 +19,19 @@ members = ["examples/html-to-string-macro", "rstml-control-flow"]
 rstml = { version = "0.12.0", path = "rstml" }
 rstml-control-flow = { version = "0.1.0", path = "rstml-control-flow" }
 # external dependencies
-proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
-quote = "1.0.21"
-syn = { version = "2.0.15", features = [
+proc-macro2 = { version = "1.0.92", features = ["span-locations"] }
+quote = "1.0.37"
+syn = { version = "2.0.90", features = [
     "visit-mut",
     "full",
     "parsing",
     "extra-traits",
 ] }
-thiserror = "1.0.37"
-syn_derive = "0.1.6"
+thiserror = "2.0.7"
+syn_derive = "0.2.0"
 proc-macro2-diagnostics = { version = "0.10", default-features = false }
-derive-where = "1.2.5"
+derive-where = "1.2.7"
 # dev-dependencies
 criterion = "0.5.1"
-eyre = "0.6.8"
+eyre = "0.6.12"
 trybuild = "1.0"
