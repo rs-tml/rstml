@@ -38,10 +38,17 @@ impl<'a> WalkNodes<'a> {
 
 impl WalkNodesOutput {
     fn extend(&mut self, other: WalkNodesOutput) {
-        self.static_format.push_str(&other.static_format);
-        self.values.extend(other.values);
-        self.diagnostics.extend(other.diagnostics);
-        self.collected_elements.extend(other.collected_elements);
+        let WalkNodesOutput {
+            static_format,
+            values,
+            diagnostics,
+            collected_elements,
+        } = other;
+
+        self.static_format.push_str(&static_format);
+        self.values.extend(values);
+        self.diagnostics.extend(diagnostics);
+        self.collected_elements.extend(collected_elements);
     }
 }
 impl<'a> syn::visit_mut::VisitMut for WalkNodes<'a> {}
