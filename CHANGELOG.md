@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.1] - 2025-01-21
+
+### Chore
+
+- Update deps versions.
+
+### Other
+
+- Update dependency versions.
+
+
 ## [0.12.0] - 2024-07-28
 
 ### Chore
@@ -56,6 +67,13 @@ Signed-off-by: max <gmx.sht@gmail.com>
 - Remove scratch
 
 - Rename KVAttributeValue::Braced -> KVAttributeValue::InvalidBraced
+
+
+### Refactor
+
+- Refactor workspace move rstml to separate folder.
+
+Use workspace version of dependencies whenever is possible.
 
 
 ## [0.11.1] - 2023-08-14
