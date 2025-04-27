@@ -192,11 +192,11 @@ impl NodeText {
 ///
 /// Comment: `<!-- "comment" -->`, currently has the same restrictions as
 /// `Text` (comment needs to be quoted).
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct NodeComment {
     pub token_start: tokens::ComStart,
     /// The comment value.
-    pub value: LitStr,
+    pub value: RawText,
     pub token_end: tokens::ComEnd,
 }
 /// Doctype node.
