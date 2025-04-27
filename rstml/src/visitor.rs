@@ -266,7 +266,7 @@ where
     fn visit_comment(&mut self, node: &mut NodeComment) -> bool {
         visit_inner!(self.visitor.visit_comment(node));
 
-        self.visit_rust_code(RustCode::LitStr(&mut node.value))
+        self.visit_raw_node(&mut node.value)
     }
     fn visit_doctype(&mut self, node: &mut NodeDoctype) -> bool {
         visit_inner!(self.visitor.visit_doctype(node));
@@ -598,7 +598,7 @@ mod tests {
                 <span>Some raw text</span>
                 <span></span> And text after span
             </div>
-            <!-- "comment" -->
+            <!-- comment -->
             <foo attr key=value> </foo>
         };
         let mut nodes = crate::parse2(stream).unwrap();
@@ -612,7 +612,12 @@ mod tests {
 
         assert_eq!(
             raw_text,
-            vec!["Other raw text", "Some raw text", "And text after span",]
+            vec![
+                "Other raw text",
+                "Some raw text",
+                "And text after span",
+                "comment"
+            ]
         );
     }
 
@@ -635,7 +640,6 @@ mod tests {
                 <span>"Some raw text"</span>
                 <span></span>"And text after span"
             </div>
-            <!-- "comment" -->
             <foo attr key=value> </foo>
         };
         let mut nodes = crate::parse2(stream).unwrap();
@@ -647,10 +651,7 @@ mod tests {
             .map(|lit| lit.value())
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            literals,
-            vec!["Some raw text", "And text after span", "comment"]
-        );
+        assert_eq!(literals, vec!["Some raw text", "And text after span"]);
     }
 
     #[test]

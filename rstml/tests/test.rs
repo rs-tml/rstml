@@ -107,7 +107,7 @@ fn test_css_selector_unquoted_text() -> Result<()> {
 fn test_css_selector_unquoted_text_string() -> Result<()> {
     let tokens = TokenStream::from_str(
         r#"
-        <style> --css-selector & with @strange + .puncts </style> 
+        <style> --css-selector & with @strange + .puncts </style>
         "#,
     )
     .unwrap();
@@ -673,9 +673,9 @@ fn test_doctype_empty() -> Result<()> {
 #[test]
 fn test_comment() -> Result<()> {
     let tokens = quote! {
-        <!-- "comment1" -->
+        <!-- comment1 -->
         <div>
-            <!-- "comment2" -->
+            <!-- comment2 -->
             <div />
         </div>
     };
@@ -688,8 +688,8 @@ fn test_comment() -> Result<()> {
         panic!("expected comment")
     };
 
-    assert_eq!(comment1.value.value(), "comment1");
-    assert_eq!(comment2.value.value(), "comment2");
+    assert_eq!(comment1.value.to_token_stream_string(), "comment1");
+    assert_eq!(comment2.value.to_token_stream_string(), "comment2");
 
     Ok(())
 }

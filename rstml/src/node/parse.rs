@@ -15,10 +15,10 @@ use syn::{
 use super::{
     atoms::{
         tokens::{self, DocStart},
-        CloseTag, FragmentClose, FragmentOpen, OpenTag,
+        CloseTag, ComEnd, ComStart, FragmentClose, FragmentOpen, OpenTag,
     },
     raw_text::RawText,
-    CustomNode, Node, NodeBlock, NodeDoctype, NodeFragment,
+    CustomNode, Node, NodeBlock, NodeComment, NodeDoctype, NodeFragment,
 };
 use crate::{
     atoms::CloseTagStart,
@@ -100,6 +100,22 @@ impl ParseRecoverable for NodeDoctype {
         Some(Self {
             token_start,
             token_doctype: doctype_keyword,
+            value,
+            token_end,
+        })
+    }
+}
+
+impl ParseRecoverable for NodeComment {
+    fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
+        let token_start = parser.parse_simple::<ComStart>(input)?;
+
+        let (value, token_end) =
+            parser.parse_with_ending(input, |_, t| RawText::from(t), <ComEnd>::parse);
+
+        let token_end = token_end?;
+        Some(Self {
+            token_start,
             value,
             token_end,
         })
@@ -290,7 +306,7 @@ impl<C: CustomNode> ParseRecoverable for Node<C> {
                 if input.peek3(Ident) {
                     Node::Doctype(parser.parse_recoverable(input)?)
                 } else {
-                    Node::Comment(parser.parse_simple(input)?)
+                    Node::Comment(parser.parse_recoverable(input)?)
                 }
             } else if input.peek2(Token![>]) {
                 Node::Fragment(parser.parse_recoverable(input)?)
