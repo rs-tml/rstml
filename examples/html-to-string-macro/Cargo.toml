@@ -25,3 +25,6 @@ rstml-control-flow.workspace = true
 
 [dev-dependencies]
 trybuild.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(rstml_signal_nightly)'] }

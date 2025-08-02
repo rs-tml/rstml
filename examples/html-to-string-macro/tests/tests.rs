@@ -43,7 +43,7 @@ fn test() {
                     <title>Example</title>
                 </head>
                 <body>
-                    <!-- comment -->
+                    <!-- "comment" -->
                     <div hello="planet"></div>
                     <div>1</div>
                     <div>{}</div>

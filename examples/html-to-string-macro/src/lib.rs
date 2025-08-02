@@ -83,9 +83,10 @@ where
     }
 
     fn visit_comment(&mut self, comment: &mut rstml::node::NodeComment) -> bool {
-        self.output
-            .static_format
-            .push_str(&format!("<!-- {} -->", comment.value.value()));
+        self.output.static_format.push_str(&format!(
+            "<!-- {} -->",
+            comment.value.to_token_stream_string()
+        ));
         false
     }
     fn visit_block(&mut self, block: &mut rstml::node::NodeBlock) -> bool {

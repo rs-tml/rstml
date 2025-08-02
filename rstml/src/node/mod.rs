@@ -190,8 +190,8 @@ impl NodeText {
 
 /// Comment node.
 ///
-/// Comment: `<!-- "comment" -->`, currently has the same restrictions as
-/// `Text` (comment needs to be quoted).
+/// Comment: `<!-- comment -->`. It is recommended to use quoted text
+/// for comments, since it is parsed as `TokenStream`.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct NodeComment {
     pub token_start: tokens::ComStart,
