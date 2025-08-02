@@ -7,7 +7,7 @@ repository = "https://github.com/rs-tml/rstml"
 license = "MIT"
 license-file = "LICENSE"
 
-include = ["/src", "LICENSE"]
+include = ["/src", "build.rs", "LICENSE"]
 readme = "README.md"
 
 [workspace]
