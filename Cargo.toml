@@ -32,6 +32,6 @@ syn_derive = "0.2.0"
 proc-macro2-diagnostics = { version = "0.10", default-features = false }
 derive-where = "1.2.7"
 # dev-dependencies
-criterion = "0.5.1"
+criterion = "0.7.0"
 eyre = "0.6.12"
 trybuild = "1.0"
