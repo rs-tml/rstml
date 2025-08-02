@@ -43,7 +43,7 @@ error: wrong close tag found
 help: open tag that should be closed; it's started here
   --> tests/ui/multiple_errors.rs:6:9
    |
-6  |         <html>
+ 6 |         <html>
    |         ^^^^^^
 
 error: close tag was parsed while waiting for open tag
