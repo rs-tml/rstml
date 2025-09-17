@@ -17,7 +17,7 @@ use syn::{
     parse::ParseStream,
     parse_quote,
     token::{Bracket, Colon},
-    Block, LifetimeParam, Pat, PatType, Token, TypeParam,
+    Block, Expr, Lifetime, LifetimeParam, Pat, PatType, Type, TypeParam,
 };
 
 #[test]
@@ -721,7 +721,7 @@ fn test_generics() -> Result<()> {
     let element = get_element(&nodes, 0);
 
     assert_eq!(element.name().to_string(), "foo");
-    let param: TypeParam = parse_quote!(Bar);
+    let param: Type = parse_quote!(Bar);
     assert_eq!(element.open_tag.generics.type_params().next(), Some(&param));
 
     Ok(())
@@ -736,8 +736,11 @@ fn test_const_generics() -> Result<()> {
     let element = get_element(&nodes, 0);
 
     assert_eq!(element.name().to_string(), "foo");
-    let param: TypeParam = parse_quote!(1);
-    assert_eq!(element.open_tag.generics.type_params().next(), Some(&param));
+    let param: Expr = parse_quote!(1);
+    assert_eq!(
+        element.open_tag.generics.const_params().next(),
+        Some(&param)
+    );
 
     Ok(())
 }
@@ -745,13 +748,13 @@ fn test_const_generics() -> Result<()> {
 #[test]
 fn test_generics_lifetime() -> Result<()> {
     let tokens = quote! {
-        <foo<'bar: 'a + 'b>/>
+        <foo<'bar>/>
     };
     let nodes = parse2(tokens)?;
     let element = get_element(&nodes, 0);
 
     assert_eq!(element.name().to_string(), "foo");
-    let param: LifetimeParam = parse_quote!('bar: 'a + 'b);
+    let param: Lifetime = parse_quote!('bar);
     assert_eq!(element.open_tag.generics.lifetimes().next(), Some(&param));
 
     Ok(())
@@ -760,14 +763,15 @@ fn test_generics_lifetime() -> Result<()> {
 #[test]
 fn test_generics_closed() -> Result<()> {
     let tokens = quote! {
-        <foo<'a, Bar>> </foo<'a, Bar>>
+        <foo<12, 'a, Bar>> </foo<12, 'a, Bar>>
     };
     let nodes = parse2(tokens)?;
     let element = get_element(&nodes, 0);
 
     assert_eq!(element.name().to_string(), "foo");
-    let param: TypeParam = parse_quote!(Bar);
-    let lf_param: LifetimeParam = parse_quote!('a);
+    let param: Type = parse_quote!(Bar);
+    let lf_param: Lifetime = parse_quote!('a);
+    let const_param: Expr = parse_quote!(12);
     assert_eq!(
         element
             .close_tag
@@ -787,6 +791,10 @@ fn test_generics_closed() -> Result<()> {
             .lifetimes()
             .next(),
         Some(&lf_param)
+    );
+    assert_eq!(
+        element.open_tag.generics.const_params().next(),
+        Some(&const_param)
     );
 
     Ok(())

@@ -9,7 +9,7 @@
 
 use proc_macro2::Ident;
 use proc_macro2_diagnostics::{Diagnostic, Level};
-use syn::{ext::IdentExt, Token};
+use syn::{ext::IdentExt, GenericArgument, Token};
 
 use crate::{
     node::{parse, NodeAttribute, NodeName},
@@ -130,17 +130,59 @@ impl FragmentClose {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, syn_derive::ToTokens)]
 pub struct TagGenerics {
+    // None if no generics
     pub lt_token: Option<Token![<]>,
     pub args: syn::punctuated::Punctuated<syn::GenericArgument, Token![,]>,
     pub gt_token: Option<Token![>]>,
 }
 
+impl TagGenerics {
+    pub fn type_params(&self) -> impl Iterator<Item = &syn::Type> {
+        self.args.iter().filter_map(|arg| {
+            if let syn::GenericArgument::Type(ty) = arg {
+                Some(ty)
+            } else {
+                None
+            }
+        })
+    }
+    pub fn lifetimes(&self) -> impl Iterator<Item = &syn::Lifetime> {
+        self.args.iter().filter_map(|arg| {
+            if let syn::GenericArgument::Lifetime(lt) = arg {
+                Some(lt)
+            } else {
+                None
+            }
+        })
+    }
+    pub fn const_params(&self) -> impl Iterator<Item = &syn::Expr> {
+        self.args.iter().filter_map(|arg| {
+            if let syn::GenericArgument::Const(expr) = arg {
+                Some(expr)
+            } else {
+                None
+            }
+        })
+    }
+    pub fn all_params(&self) -> impl Iterator<Item = &syn::GenericArgument> {
+        self.args.iter()
+    }
+}
+
 impl syn::parse::Parse for TagGenerics {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if !input.peek(Token![<]) {
+            return Ok(TagGenerics::default());
+        }
+
+        let lt_token: Token![<] = input.parse()?;
+        let args = syn::punctuated::Punctuated::parse_separated_nonempty(input)?;
+        let gt_token: Token![>] = input.parse()?;
+
         Ok(Self {
-            lt_token: input.parse()?,
-            args: syn::punctuated::Punctuated::parse_separated_nonempty(input)?,
-            gt_token: input.parse()?,
+            lt_token: Some(lt_token),
+            args,
+            gt_token: Some(gt_token),
         })
     }
 }
