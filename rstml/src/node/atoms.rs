@@ -128,13 +128,30 @@ impl FragmentClose {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, syn_derive::ToTokens)]
+pub struct TagGenerics {
+    pub lt_token: Option<Token![<]>,
+    pub args: syn::punctuated::Punctuated<syn::GenericArgument, Token![,]>,
+    pub gt_token: Option<Token![>]>,
+}
+
+impl syn::parse::Parse for TagGenerics {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            lt_token: input.parse()?,
+            args: syn::punctuated::Punctuated::parse_separated_nonempty(input)?,
+            gt_token: input.parse()?,
+        })
+    }
+}
+
 /// Open tag for element, possibly self-closed.
 /// `<name attr=x, attr_flag>`
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct OpenTag {
     pub token_lt: Token![<],
     pub name: NodeName,
-    pub generics: syn::Generics,
+    pub generics: TagGenerics,
     #[to_tokens(parse::to_tokens_array)]
     pub attributes: Vec<NodeAttribute>,
     pub end_tag: tokens::OpenTagEnd,
@@ -151,7 +168,7 @@ impl OpenTag {
 pub struct CloseTag {
     pub start_tag: tokens::CloseTagStart,
     pub name: NodeName,
-    pub generics: syn::Generics,
+    pub generics: TagGenerics,
     pub token_gt: Token![>],
 }
 

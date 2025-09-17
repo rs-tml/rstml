@@ -728,6 +728,21 @@ fn test_generics() -> Result<()> {
 }
 
 #[test]
+fn test_const_generics() -> Result<()> {
+    let tokens = quote! {
+        <foo<1>/>
+    };
+    let nodes = parse2(tokens)?;
+    let element = get_element(&nodes, 0);
+
+    assert_eq!(element.name().to_string(), "foo");
+    let param: TypeParam = parse_quote!(1);
+    assert_eq!(element.open_tag.generics.type_params().next(), Some(&param));
+
+    Ok(())
+}
+
+#[test]
 fn test_generics_lifetime() -> Result<()> {
     let tokens = quote! {
         <foo<'bar: 'a + 'b>/>
