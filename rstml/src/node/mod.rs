@@ -164,7 +164,7 @@ impl<C: CustomNode> NodeElement<C> {
     pub fn attributes_mut(&mut self) -> &mut Vec<NodeAttribute> {
         &mut self.open_tag.attributes
     }
-    pub fn chidlren(&self) -> &[Node<C>] {
+    pub fn children(&self) -> &[Node<C>] {
         &self.children
     }
     pub fn children_mut(&mut self) -> &mut Vec<Node<C>> {
