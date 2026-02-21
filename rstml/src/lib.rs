@@ -197,15 +197,15 @@
 //!
 //! - **Customization**
 //!
-//!   A [`ParserConfig`] to customize parsing behavior is available, so if you
-//! have   slightly different requirements for parsing and it's not yet
-//! customizable   feel free to open an issue or pull request to extend the
-//! configuration.
+//!  A [`ParserConfig`] to customize parsing behavior is available, so if you
+//!   have   slightly different requirements for parsing and it's not yet
+//!   customizable   feel free to open an issue or pull request to extend the
+//!   configuration.
 //!
-//!   One highlight with regards to customization is the [`transform_block`]
-//! configuration, which takes a closure that receives raw block content as
-//! `ParseStream` and lets you optionally convert it to a `TokenStream`. That
-//! makes it possible to have custom syntax in blocks. More details in [#9].
+//! One highlight with regards to customization is the [`transform_block`]
+//!  configuration, which takes a closure that receives raw block content as
+//!  `ParseStream` and lets you optionally convert it to a `TokenStream`. That
+//!  makes it possible to have custom syntax in blocks. More details in [#9].
 //!
 //!   Additionally, [`CustomNode`] can be used to implement fully custom
 //! parsing.

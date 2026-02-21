@@ -32,17 +32,17 @@ pub struct ParserConfig<C = Infallible> {
 impl<C> Clone for ParserConfig<C> {
     fn clone(&self) -> Self {
         Self {
-            flat_tree: self.flat_tree.clone(),
+            flat_tree: self.flat_tree,
             number_of_top_level_nodes: self.number_of_top_level_nodes,
             type_of_top_level_nodes: self.type_of_top_level_nodes.clone(),
             transform_block: self.transform_block.clone(),
-            recover_block: self.recover_block.clone(),
+            recover_block: self.recover_block,
             always_self_closed_elements: self.always_self_closed_elements.clone(),
             raw_text_elements: self.raw_text_elements.clone(),
             element_close_wildcard: self.element_close_wildcard.clone(),
             #[cfg(feature = "rawtext-stable-hack")]
             macro_pattern: self.macro_pattern.clone(),
-            custom_node: self.custom_node.clone(),
+            custom_node: self.custom_node,
         }
     }
 }

@@ -257,7 +257,7 @@ fn generate_tags_docs(elements: &[NodeName]) -> Vec<proc_macro2::TokenStream> {
         .collect();
 
     elements
-        .into_iter()
+        .iter()
         .map(|e| {
             if elements_as_type.contains(&*e.to_string()) {
                 let element = quote_spanned!(e.span() => enum);

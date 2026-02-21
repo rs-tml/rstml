@@ -9,7 +9,7 @@
 
 use proc_macro2::Ident;
 use proc_macro2_diagnostics::{Diagnostic, Level};
-use syn::{ext::IdentExt, GenericArgument, Token};
+use syn::{ext::IdentExt, Token};
 
 use crate::{
     node::{parse, NodeAttribute, NodeName},

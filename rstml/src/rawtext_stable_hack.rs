@@ -25,7 +25,7 @@ pub fn is_macro_args_recoverable() -> bool {
 
 // Inject default text to every raw node, just to avoid panics.
 pub fn inject_raw_text_default<C: CustomNode>(source: &mut [Node<C>]) {
-    for source in source.into_iter() {
+    for source in source {
         replace_node_default(source)
     }
 }
@@ -41,7 +41,7 @@ pub fn inject_raw_text<C: CustomNode + std::fmt::Debug>(
         hacked.len(),
         "Second parsing return different result in recover_space_hack"
     );
-    for (source, hacked) in source.into_iter().zip(hacked) {
+    for (source, hacked) in source.iter_mut().zip(hacked) {
         replace_node(source, hacked)
     }
 }
@@ -65,7 +65,7 @@ pub fn replace_node_default<C: CustomNode>(source: &mut Node<C>) {
 
 pub fn replace_node<C: CustomNode + std::fmt::Debug>(source: &mut Node<C>, hacked: &Node<C>) {
     match (source, hacked) {
-        (Node::RawText(source), Node::RawText(hacked)) => source.recover_space(&hacked),
+        (Node::RawText(source), Node::RawText(hacked)) => source.recover_space(hacked),
         (Node::Fragment(source), Node::Fragment(hacked)) => {
             inject_raw_text(&mut source.children, &hacked.children)
         }
@@ -148,7 +148,7 @@ impl MacroPattern {
 
         // skip any token before first '!'
         // to allow using macro with differnet paths.
-        while let Some(t) = stream.next() {
+        for t in &mut stream {
             if let TokenTree::Punct(p) = t {
                 if p.as_char() == '!' {
                     break;
@@ -225,7 +225,7 @@ impl MacroPattern {
                 TokenStreamOperations::SkipUntil(expected) => 'compare: loop {
                     let needed = expected.clone().into_iter();
                     for expected in needed {
-                        let Some(t) = stream.next() else { return None };
+                        let t = stream.next()?;
 
                         if t.to_string() != expected.to_string() {
                             continue 'compare;

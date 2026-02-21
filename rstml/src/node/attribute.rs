@@ -69,6 +69,7 @@ impl AttributeValueExpr {
 }
 
 #[derive(Clone, Debug, syn_derive::ToTokens)]
+#[allow(clippy::large_enum_variant)]
 pub enum KeyedAttributeValue {
     Binding(FnBinding),
     Value(AttributeValueExpr),
@@ -130,13 +131,10 @@ impl KeyedAttribute {
     }
 
     pub fn value(&self) -> Option<&Expr> {
-        self.possible_value
-            .to_value()
-            .map(|v| match &v.value {
-                KVAttributeValue::Expr(expr) => Some(expr),
-                KVAttributeValue::InvalidBraced(_) => None,
-            })
-            .flatten()
+        self.possible_value.to_value().and_then(|v| match &v.value {
+            KVAttributeValue::Expr(expr) => Some(expr),
+            KVAttributeValue::InvalidBraced(_) => None,
+        })
     }
 
     // Checks if error is about eof.
@@ -204,6 +202,7 @@ fn closure_arg(input: ParseStream) -> syn::Result<Pat> {
 ///
 /// Attributes is stored in opening tags.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
+#[allow(clippy::large_enum_variant)]
 pub enum NodeAttribute {
     ///
     /// Element attribute that is computed from rust code block.

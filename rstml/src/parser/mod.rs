@@ -20,7 +20,6 @@ use crate::{node::*, ParserConfig};
 ///
 /// Allows customization through `ParserConfig`.
 /// Support recovery after parsing invalid token.
-
 pub struct Parser<C> {
     config: ParserConfig<C>,
 }
@@ -59,7 +58,7 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
 
         #[cfg(feature = "rawtext-stable-hack")]
         // re-parse using proc_macro2::fallback, only if output without error
-        let source = Self::reparse_raw_text(&self, parser, source);
+        let source = Self::reparse_raw_text(self, parser, source);
         source
     }
     #[cfg(feature = "rawtext-stable-hack")]
@@ -113,7 +112,7 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
         proc_macro2::fallback::unforce();
         rawtext_stable_hack::inject_raw_text(&mut source, &hacked);
 
-        return ParsingResult::Ok(source);
+        ParsingResult::Ok(source)
     }
 
     /// Parse a given [`ParseStream`].

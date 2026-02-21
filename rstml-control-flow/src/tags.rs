@@ -370,10 +370,7 @@ pub enum Conditions {
 
 impl Conditions {
     pub fn is_highlevel(&self) -> bool {
-        match self {
-            Self::If(_) | Self::For(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::If(_) | Self::For(_))
     }
 }
 

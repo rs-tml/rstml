@@ -152,6 +152,7 @@ impl<C> RawText<C> {
     // If feature "rawtext-stable-hack-module" wasn't activated returns None.
     //
     // Recovered text, tries to save whitespaces if possible.
+    #[allow(clippy::needless_return)]
     pub fn to_source_text_hack(&self) -> Option<String> {
         #[cfg(feature = "rawtext-stable-hack-module")]
         {

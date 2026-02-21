@@ -59,6 +59,7 @@ impl fmt::Display for NodeType {
 
 /// Node in the tree.
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Node<C = Infallible> {
     Comment(NodeComment),
     Doctype(NodeDoctype),

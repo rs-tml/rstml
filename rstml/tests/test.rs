@@ -17,7 +17,7 @@ use syn::{
     parse::ParseStream,
     parse_quote,
     token::{Bracket, Colon},
-    Block, Expr, Lifetime, LifetimeParam, Pat, PatType, Type, TypeParam,
+    Block, Expr, Lifetime, Pat, PatType, Type,
 };
 
 #[test]
@@ -297,7 +297,7 @@ fn test_reserved_keyword_attributes() -> Result<()> {
     };
     let nodes = parse2(tokens)?;
     let element = get_element(&nodes, 0);
-    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().get(0) else {
+    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().first() else {
         panic!("expected attribute")
     };
 
@@ -643,7 +643,7 @@ fn test_doctype() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+    let Some(Node::Doctype(doctype)) = nodes.first() else {
         panic!("expected doctype")
     };
 
@@ -661,7 +661,7 @@ fn test_doctype_empty() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+    let Some(Node::Doctype(doctype)) = nodes.first() else {
         panic!("expected doctype")
     };
 
@@ -681,7 +681,7 @@ fn test_comment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Comment(comment1)) = nodes.get(0) else {
+    let Some(Node::Comment(comment1)) = nodes.first() else {
         panic!("expected comment")
     };
     let Node::Comment(comment2) = get_element_child(&nodes, 1, 0) else {
@@ -703,7 +703,7 @@ fn test_fragment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Fragment(fragment)) = nodes.get(0) else {
+    let Some(Node::Fragment(fragment)) = nodes.first() else {
         panic!("expected fragment")
     };
 

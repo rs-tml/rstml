@@ -635,7 +635,7 @@ mod test_typed {
         };
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
-        let node = expr.then_branch.body.iter().next().unwrap();
+        let node = &expr.then_branch.body[0];
         let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::If(expr) = &actual.expression else {
             panic!()
@@ -661,7 +661,7 @@ mod test_typed {
         };
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
-        let node = expr.then_branch.body.iter().next().unwrap();
+        let node = &expr.then_branch.body[0];
         let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::For(expr) = &actual.expression else {
             panic!()
@@ -713,19 +713,13 @@ mod test_universal {
     #[cfg(not(feature = "extendable"))]
     fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
         use rstml::Parser;
-
-        let actual =
-            Parser::new(ParserConfig::new().custom_node::<EscapeCode>()).parse_recoverable(input);
-
-        return actual;
+        Parser::new(ParserConfig::new().custom_node::<EscapeCode>()).parse_recoverable(input)
     }
     #[cfg(feature = "extendable")]
     fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
         use crate::ExtendableCustomNode;
 
-        let result =
-            ExtendableCustomNode::parse2_with_config::<(EscapeCode,)>(ParserConfig::new(), input);
-        return result;
+        ExtendableCustomNode::parse2_with_config::<(EscapeCode,)>(ParserConfig::new(), input)
     }
 
     // For extendable custom node it is safe to use only after parsing.
