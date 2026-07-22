@@ -23,13 +23,13 @@
 //!
 //! // Extract some specific nodes from the tree.
 //! let Node::Element(element) = &nodes[0] else {
-//!     bail!("element")
+//!     bail!("element");
 //! };
 //! let NodeAttribute::Attribute(attribute) = &element.attributes()[0] else {
-//!     bail!("attribute")
+//!     bail!("attribute");
 //! };
 //! let Node::Text(text) = &element.children[0] else {
-//!     bail!("text")
+//!     bail!("text");
 //! };
 //!
 //! // Work with the nodes.

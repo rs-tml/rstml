@@ -17,7 +17,7 @@ members = ["examples/html-to-string-macro", "rstml-control-flow"]
 [workspace.dependencies]
 # Our packages
 rstml = { version = "0.13.0", path = "rstml" }
-rstml-control-flow = { version = "0.1.0", path = "rstml-control-flow" }
+rstml-control-flow = { version = "0.2.0", path = "rstml-control-flow" }
 # external dependencies
 proc-macro2 = { version = "1.0.93", features = ["span-locations"] }
 quote = "1.0.38"
