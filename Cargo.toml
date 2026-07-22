@@ -16,12 +16,12 @@ members = ["examples/html-to-string-macro", "rstml-control-flow"]
 
 [workspace.dependencies]
 # Our packages
-rstml = { version = "0.12.0", path = "rstml" }
+rstml = { version = "0.13.0", path = "rstml" }
 rstml-control-flow = { version = "0.1.0", path = "rstml-control-flow" }
 # external dependencies
 proc-macro2 = { version = "1.0.93", features = ["span-locations"] }
 quote = "1.0.38"
-syn = { version = "2.0.96", features = [
+syn = { version = "3.0.0", features = [
     "visit-mut",
     "full",
     "parsing",
@@ -29,7 +29,7 @@ syn = { version = "2.0.96", features = [
 ] }
 thiserror = "2.0.11"
 syn_derive = "0.2.0"
-proc-macro2-diagnostics = { version = "0.10", default-features = false }
+proc-macro2-diagnostics2 = { version = "0.11", default-features = false }
 derive-where = "1.2.7"
 # dev-dependencies
 criterion = "0.7.0"

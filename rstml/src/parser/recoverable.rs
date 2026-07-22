@@ -40,7 +40,7 @@
 
 use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
-use proc_macro2_diagnostics::{Diagnostic, Level};
+use proc_macro2_diagnostics2::{Diagnostic, Level};
 use syn::parse::{Parse, ParseStream};
 
 use crate::{
@@ -177,7 +177,7 @@ impl RecoverableContext {
     }
 
     /// Push custom message of [`syn::Error`] or
-    /// [`proc_macro2_diagnostics::Diagnostic`]
+    /// [`proc_macro2_diagnostics2::Diagnostic`]
     pub fn push_diagnostic(&mut self, diagnostic: impl Into<Diagnostic>) {
         let diag = diagnostic.into();
         // println!(

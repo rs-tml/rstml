@@ -2,7 +2,7 @@
 //! Implementation of ToTokens and Spanned for node related structs
 
 use proc_macro2::{extra::DelimSpan, Delimiter, TokenStream};
-use proc_macro2_diagnostics::{Diagnostic, Level};
+use proc_macro2_diagnostics2::{Diagnostic, Level};
 use quote::ToTokens;
 use syn::{
     braced,

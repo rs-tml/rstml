@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use derive_where::derive_where;
-use proc_macro2_diagnostics::Diagnostic;
+use proc_macro2_diagnostics2::Diagnostic;
 use quote::{ToTokens, TokenStreamExt};
 use rstml::{
     atoms::{self, CloseTagStart, OpenTag, OpenTagEnd},
@@ -321,7 +321,7 @@ impl ParseRecoverable for IfNode {
                         if else_child.is_some() {
                             parser.push_diagnostic(Diagnostic::spanned(
                                 else_if.span(),
-                                proc_macro2_diagnostics::Level::Error,
+                                proc_macro2_diagnostics2::Level::Error,
                                 "else if after else",
                             ));
                             return None;

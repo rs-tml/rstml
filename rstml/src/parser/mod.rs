@@ -3,7 +3,7 @@
 use std::vec;
 
 use proc_macro2::TokenStream;
-use proc_macro2_diagnostics::Diagnostic;
+use proc_macro2_diagnostics2::Diagnostic;
 use syn::{parse::ParseStream, spanned::Spanned, Result};
 
 pub mod recoverable;
@@ -85,7 +85,7 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
         // return error, if macro source_text is not available.
         if !rawtext_stable_hack::is_macro_args_recoverable() {
             source.push_diagnostic(Diagnostic::new(
-                    proc_macro2_diagnostics::Level::Warning,
+                    proc_macro2_diagnostics2::Level::Warning,
                     "Failed to retrive source text of macro call, maybe macro was called from other macro?",
                 ));
             return source;
@@ -149,7 +149,7 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
                 .expect("No error in parsing token stream");
             parser.push_diagnostic(Diagnostic::spanned(
                 tts.span(),
-                proc_macro2_diagnostics::Level::Error,
+                proc_macro2_diagnostics2::Level::Error,
                 "Tokens was skipped after incorrect parsing",
             ));
         }

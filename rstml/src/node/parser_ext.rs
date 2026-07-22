@@ -1,5 +1,5 @@
 use proc_macro2::{TokenStream, TokenTree};
-use proc_macro2_diagnostics::{Diagnostic, Level};
+use proc_macro2_diagnostics2::{Diagnostic, Level};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     spanned::Spanned,
@@ -55,13 +55,13 @@ impl RecoverableContext {
     /// It is not considered stable.
     ///
     /// Example:
-    /// ```ignore
+    /// ```no_build
     /// # use syn::{parse::{Parser, ParseStream}, Ident, Result, parse_macro_input, Token};
-    /// # use rstml::{parse_tokens_until};
     /// # fn main() -> syn::Result<()>{
+    /// # let mut parser = rstml::recoverable::RecoverableContext::new(rstml::recoverable::RecoveryConfig::default());
     /// let tokens:proc_macro2::TokenStream = quote::quote!(few idents seperated by spaces and then minus sign - that will stop parsing).into();
     /// let concat_idents_without_minus = |input: ParseStream| -> Result<String> {
-    ///     let (idents, _minus) = parser.parse_tokens_until::<Ident, _, _>(input, |i|
+    ///     let (idents, _minus) = parser.parse_tokens_until_call::<Ident, _, _>(input, |i|
     ///         i.parse::<Token![-]>()
     ///     )?;
     ///     let mut new_str = String::new();
@@ -120,7 +120,8 @@ impl RecoverableContext {
     /// It is not considered stable.
     ///
     /// Example:
-    /// ```ignore
+    /// ```
+    /// # use quote::quote;
     /// let tokens = quote!(some_expr_seperated + with - lt_gt * tokens <> other part);
     /// ```
     /// In this example "<" can can be parsed as part of expression, but we want

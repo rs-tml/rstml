@@ -17,7 +17,7 @@ use syn::{
     parse::ParseStream,
     parse_quote,
     token::{Bracket, Colon},
-    Block, Expr, Lifetime, LifetimeParam, Pat, PatType, Type, TypeParam,
+    Block, Expr, Lifetime, Pat, PatType, Type,
 };
 
 #[test]

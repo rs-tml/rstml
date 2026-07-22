@@ -119,9 +119,9 @@ where
                 .static_format
                 .push_str(&format!("/</{}>", element.open_tag.name));
             if !element.children.is_empty() {
-                let warning = proc_macro2_diagnostics::Diagnostic::spanned(
+                let warning = proc_macro2_diagnostics2::Diagnostic::spanned(
                     element.open_tag.name.span(),
-                    proc_macro2_diagnostics::Level::Warning,
+                    proc_macro2_diagnostics2::Level::Warning,
                     "Element is processed as empty, and cannot have any child",
                 );
                 self.output.diagnostics.push(warning.emit_as_expr_tokens())

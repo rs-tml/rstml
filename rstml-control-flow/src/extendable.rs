@@ -41,7 +41,7 @@
 
 use std::{any::Any, cell::RefCell, rc::Rc};
 
-use proc_macro2_diagnostics::Diagnostic;
+use proc_macro2_diagnostics2::Diagnostic;
 use quote::ToTokens;
 use rstml::{
     node::{CustomNode, Node},
@@ -110,7 +110,7 @@ macro_rules! impl_tuple {
                     $name::parse_recoverable(ctx, input).map(ExtendableCustomNode::from_value)
                 })else*
                 else {
-                    ctx.push_diagnostic(Diagnostic::new(proc_macro2_diagnostics::Level::Error, "Parsing invalid custom node"));
+                    ctx.push_diagnostic(Diagnostic::new(proc_macro2_diagnostics2::Level::Error, "Parsing invalid custom node"));
                     None
                 }
             }
