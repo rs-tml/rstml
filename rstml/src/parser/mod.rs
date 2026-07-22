@@ -14,13 +14,12 @@ use {proc_macro2::Span, std::str::FromStr};
 use self::recoverable::{ParseRecoverable, ParsingResult, RecoverableContext};
 #[cfg(feature = "rawtext-stable-hack")]
 use crate::rawtext_stable_hack;
-use crate::{node::*, ParserConfig};
+use crate::{node::{Infallible, CustomNode, Node}, ParserConfig};
 ///
 /// Primary library interface to RSX Parser
 ///
 /// Allows customization through `ParserConfig`.
 /// Support recovery after parsing invalid token.
-
 pub struct Parser<C> {
     config: ParserConfig<C>,
 }
@@ -35,12 +34,17 @@ impl Default for Parser<Infallible> {
 
 impl<C: CustomNode + std::fmt::Debug> Parser<C> {
     /// Create a new parser with the given [`ParserConfig`].
+    #[must_use]
     pub fn new(config: ParserConfig<C>) -> Self {
         Parser { config }
     }
 
     /// Parse the given [`proc-macro2::TokenStream`] or
     /// [`proc-macro::TokenStream`] into a [`Node`] tree.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`syn::Error`] if parsing fails completely or only partially.
     ///
     /// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
     /// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
@@ -51,6 +55,11 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
 
     /// Advance version of `parse_simple` that returns array of errors in case
     /// of partial parsing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inner syn parser unexpectedly fails, or (with
+    /// `rawtext-stable-hack`) if macro source text / pattern matching fails.
     pub fn parse_recoverable(&self, v: impl Into<TokenStream>) -> ParsingResult<Vec<Node<C>>> {
         use syn::parse::Parser as _;
 
@@ -59,7 +68,7 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
 
         #[cfg(feature = "rawtext-stable-hack")]
         // re-parse using proc_macro2::fallback, only if output without error
-        let source = Self::reparse_raw_text(&self, parser, source);
+        let source = Self::reparse_raw_text(self, parser, source);
         source
     }
     #[cfg(feature = "rawtext-stable-hack")]
@@ -113,10 +122,15 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
         proc_macro2::fallback::unforce();
         rawtext_stable_hack::inject_raw_text(&mut source, &hacked);
 
-        return ParsingResult::Ok(source);
+        ParsingResult::Ok(source)
     }
 
     /// Parse a given [`ParseStream`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if remaining input cannot be parsed as a [`TokenStream`] after a
+    /// recoverable parse failure (should be unreachable).
     pub fn parse_syn_stream(&self, input: ParseStream) -> ParsingResult<Vec<Node<C>>> {
         let mut nodes = vec![];
         let mut top_level_nodes = 0;
@@ -131,15 +145,14 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
             if let Some(type_of_top_level_nodes) = &self.config.type_of_top_level_nodes {
                 if &parsed_node.r#type() != type_of_top_level_nodes {
                     parser.push_diagnostic(input.error(format!(
-                        "top level nodes need to be of type {}",
-                        type_of_top_level_nodes
+                        "top level nodes need to be of type {type_of_top_level_nodes}"
                     )));
                     break;
                 }
             }
 
             top_level_nodes += 1;
-            nodes.push(parsed_node)
+            nodes.push(parsed_node);
         }
 
         // its important to skip tokens, to avoid Unexpected tokens errors.
@@ -157,9 +170,8 @@ impl<C: CustomNode + std::fmt::Debug> Parser<C> {
         if let Some(number_of_top_level_nodes) = &self.config.number_of_top_level_nodes {
             if &top_level_nodes != number_of_top_level_nodes {
                 parser.push_diagnostic(input.error(format!(
-                    "saw {} top level nodes but exactly {} are required",
-                    top_level_nodes, number_of_top_level_nodes
-                )))
+                    "saw {top_level_nodes} top level nodes but exactly {number_of_top_level_nodes} are required"
+                )));
             }
         }
 

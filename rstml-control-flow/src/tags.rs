@@ -4,7 +4,7 @@ use derive_where::derive_where;
 use proc_macro2_diagnostics2::Diagnostic;
 use quote::{ToTokens, TokenStreamExt};
 use rstml::{
-    atoms::{self, CloseTagStart, OpenTag, OpenTagEnd},
+    atoms::{self, CloseTagStart, OpenTag, OpenTagEnd, TagGenerics},
     node::{CustomNode, Node as RNode, NodeElement},
     recoverable::{ParseRecoverable, RecoverableContext},
 };
@@ -250,8 +250,8 @@ impl ParseRecoverable for ElseNode {
                 &OpenTag {
                     token_lt,
                     name: parse_quote!(#token_else),
-                    generics: Default::default(),
-                    attributes: Default::default(),
+                    generics: TagGenerics::default(),
+                    attributes: Vec::default(),
                     end_tag: open_tag_end,
                 },
             )?
@@ -306,8 +306,8 @@ impl ParseRecoverable for IfNode {
             &OpenTag {
                 token_lt,
                 name: parse_quote!(#token_if),
-                generics: Default::default(),
-                attributes: Default::default(),
+                generics: TagGenerics::default(),
+                attributes: Vec::default(),
                 end_tag: open_tag_end_,
             },
         )?;
@@ -357,7 +357,7 @@ impl ParseRecoverable for IfNode {
 }
 
 /// Conditions can be either if, else if, else, match or for
-/// Make sure to check is_highlevel before using, to avoid toplevel else/else if
+/// Make sure to check `is_highlevel` before using, to avoid toplevel else/else if
 /// nodes.
 #[derive(Clone, Debug)]
 pub enum Conditions {
@@ -369,11 +369,9 @@ pub enum Conditions {
 }
 
 impl Conditions {
+    #[must_use]
     pub fn is_highlevel(&self) -> bool {
-        match self {
-            Self::If(_) | Self::For(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::If(_) | Self::For(_))
     }
 }
 

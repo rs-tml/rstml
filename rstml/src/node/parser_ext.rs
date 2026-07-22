@@ -20,6 +20,11 @@ impl RecoverableContext {
     ///
     /// [`parse_simple`]: #method.parse_simple
     /// [`Expr`]: https://docs.rs/syn/latest/syn/enum.Expr.html
+    ///
+    /// # Panics
+    ///
+    /// Panics if a [`TokenTree`] cannot be parsed from non-empty input (should
+    /// be unreachable).
     pub fn parse_simple_until<T: Parse, E: Parse>(&mut self, input: ParseStream) -> Option<(T, E)> {
         let mut tokens = TokenStream::new();
         let res = loop {
@@ -41,10 +46,7 @@ impl RecoverableContext {
                 .expect("TokenTree should always be parsable");
             tokens.extend([next]);
         };
-        res.and_then(|res| {
-            self.save_diagnostics(syn::parse2(tokens))
-                .map(|val| (val, res))
-        })
+        self.save_diagnostics(syn::parse2(tokens)).zip(res)
     }
 
     /// Parse array of toknes using recoverable parser.
@@ -97,7 +99,7 @@ impl RecoverableContext {
                 break Some(res);
             }
             if let Some(o) = self.parse_recoverable(input) {
-                collection.push(o)
+                collection.push(o);
             }
 
             if old_cursor == input.cursor() {
@@ -110,7 +112,7 @@ impl RecoverableContext {
     /// tokens before separator.
     /// For simple input this method will work like
     /// `parse_tokens_until`.
-    /// Internally it creates intermediate `TokenStream`` and
+    /// Internally it creates intermediate `TokenStream` and
     /// copy of all tokens until separator token is found. It is usefull
     /// when separator (or it's part) can be treated as part of token T.
     ///
@@ -127,6 +129,11 @@ impl RecoverableContext {
     /// In this example "<" can can be parsed as part of expression, but we want
     /// to split tokens after "<>" was found. So instead of parsing all
     /// input as expression, firstly we need to seperate it into two chunks.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a [`TokenTree`] cannot be parsed from non-empty input (should
+    /// be unreachable).
     pub fn parse_tokens_with_conflicted_ending<T, F, U>(
         &mut self,
         input: ParseStream,
@@ -143,7 +150,7 @@ impl RecoverableContext {
                 while !input.is_empty() {
                     let old_cursor = input.cursor();
                     if let Some(o) = parser.parse_recoverable(input) {
-                        collection.push(o)
+                        collection.push(o);
                     }
                     if old_cursor == input.cursor() {
                         break;
@@ -158,7 +165,7 @@ impl RecoverableContext {
                     eaten_tokens.span(),
                     Level::Error,
                     "tokens was ignored during parsing",
-                ))
+                ));
             }
             collection
         };

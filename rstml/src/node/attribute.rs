@@ -53,6 +53,7 @@ impl AttributeValueExpr {
     /// .. and this list can be extended
     ///
     /// Adapted from leptos
+    #[must_use]
     pub fn value_literal_string(&self) -> Option<String> {
         match &self.value {
             KVAttributeValue::Expr(Expr::Lit(l)) => match &l.lit {
@@ -76,11 +77,11 @@ pub enum KeyedAttributeValue {
 }
 
 impl KeyedAttributeValue {
+    #[must_use]
     pub fn to_value(&self) -> Option<&AttributeValueExpr> {
         match self {
             KeyedAttributeValue::Value(v) => Some(v),
-            KeyedAttributeValue::None => None,
-            KeyedAttributeValue::Binding(_) => None,
+            KeyedAttributeValue::None | KeyedAttributeValue::Binding(_) => None,
         }
     }
 }
@@ -123,20 +124,21 @@ impl KeyedAttribute {
     /// .. and this list can be extended
     ///
     /// Adapted from leptos
+    #[must_use]
     pub fn value_literal_string(&self) -> Option<String> {
         self.possible_value
             .to_value()
-            .and_then(|v| v.value_literal_string())
+            .and_then(AttributeValueExpr::value_literal_string)
     }
 
+    #[must_use]
     pub fn value(&self) -> Option<&Expr> {
         self.possible_value
             .to_value()
-            .map(|v| match &v.value {
+            .and_then(|v| match &v.value {
                 KVAttributeValue::Expr(expr) => Some(expr),
                 KVAttributeValue::InvalidBraced(_) => None,
             })
-            .flatten()
     }
 
     // Checks if error is about eof.
@@ -150,7 +152,7 @@ impl KeyedAttribute {
                 .expect("BUG: Token stream should always be parsable");
             return syn::Error::new(
                 stream.span(),
-                format!("failed to parse expression: {}", error),
+                format!("failed to parse expression: {error}"),
             );
         }
         error
@@ -204,6 +206,7 @@ fn closure_arg(input: ParseStream) -> syn::Result<Pat> {
 ///
 /// Attributes is stored in opening tags.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
+#[allow(clippy::large_enum_variant)]
 pub enum NodeAttribute {
     ///
     /// Element attribute that is computed from rust code block.
@@ -322,6 +325,6 @@ impl ToTokens for FnBinding {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         self.paren.surround(tokens, |tokens| {
             self.inputs.to_tokens(tokens);
-        })
+        });
     }
 }

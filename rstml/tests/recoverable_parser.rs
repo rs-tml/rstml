@@ -1,6 +1,5 @@
 use std::{convert::TryFrom, str::FromStr};
 
-use eyre::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
 use rstml::{
@@ -34,11 +33,11 @@ fn test_recover_incorrect_closing_tags() {
         panic!("No child")
     };
     assert_eq!(c.open_tag.name, c.close_tag.as_ref().unwrap().name);
-    assert_eq!(c.open_tag.name.to_string(), "foo")
+    assert_eq!(c.open_tag.name.to_string(), "foo");
 }
 
 #[test]
-fn test_parse_invalid_block() -> Result<()> {
+fn test_parse_invalid_block() {
     let tokens = TokenStream::from_str(
         "<foo>{x.}</foo>", // dot is not allowed
     )
@@ -54,11 +53,10 @@ fn test_parse_invalid_block() -> Result<()> {
     assert!(block.try_block().is_none());
 
     assert!(Block::try_from(block.clone()).is_err());
-    Ok(())
 }
 
 #[test]
-fn test_parse_invalid_attr_block() -> Result<()> {
+fn test_parse_invalid_attr_block() {
     let tokens = TokenStream::from_str(
         "<foo {x.} />", // dot is not allowed
     )
@@ -74,11 +72,10 @@ fn test_parse_invalid_attr_block() -> Result<()> {
     let NodeAttribute::Block(NodeBlock::Invalid { .. }) = f.attributes()[0] else {
         panic!("expected attribute")
     };
-    Ok(())
 }
 
 #[test]
-fn test_parse_closed_tag_without_open() -> Result<()> {
+fn test_parse_closed_tag_without_open() {
     let tokens = TokenStream::from_str("</foo>").unwrap();
     let config = ParserConfig::new().recover_block(true);
     let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
@@ -89,11 +86,10 @@ fn test_parse_closed_tag_without_open() -> Result<()> {
         panic!("expected element")
     };
     assert_eq!(f.open_tag.name.to_string(), "foo");
-    Ok(())
 }
 
 #[test]
-fn test_parse_open_tag_without_close() -> Result<()> {
+fn test_parse_open_tag_without_close() {
     let tokens = TokenStream::from_str("<foo> <bar></foo>").unwrap();
     let config = ParserConfig::new().recover_block(true);
     let (nodes, errors) = Parser::new(config).parse_recoverable(tokens).split_vec();
@@ -109,7 +105,6 @@ fn test_parse_open_tag_without_close() -> Result<()> {
         panic!("expected element")
     };
     assert_eq!(f.open_tag.name.to_string(), "bar");
-    Ok(())
 }
 
 // TODO: keyed attribute

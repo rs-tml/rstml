@@ -106,9 +106,9 @@ fn test_css_selector_unquoted_text() -> Result<()> {
 #[test]
 fn test_css_selector_unquoted_text_string() -> Result<()> {
     let tokens = TokenStream::from_str(
-        r#"
+        r"
         <style> --css-selector & with @strange + .puncts </style>
-        "#,
+        ",
     )
     .unwrap();
 
@@ -140,9 +140,9 @@ fn test_css_selector_unquoted_text_string() -> Result<()> {
 #[test]
 fn test_single_element_with_unquoted_text_advance() -> Result<()> {
     let tokens = TokenStream::from_str(
-        r#"
+        r"
         <foo> bar  baz </foo>
-        "#,
+        ",
     )
     .unwrap();
 
@@ -168,7 +168,7 @@ struct TestCustomNode {
 
 impl ToTokens for TestCustomNode {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.bracket.surround(tokens, |c| self.data.to_tokens(c))
+        self.bracket.surround(tokens, |c| self.data.to_tokens(c));
     }
 }
 
@@ -283,9 +283,9 @@ fn test_unqouted_unfinished_quote_failing() {
 fn test_unqouted_unfinished_brace_failing() {
     // Brace should be finished.
     let _ = TokenStream::from_str(
-        r#"
+        r"
         <foo> bar{  baz </foo>
-        "#,
+        ",
     )
     .expect("Parsing error");
 }
@@ -297,7 +297,7 @@ fn test_reserved_keyword_attributes() -> Result<()> {
     };
     let nodes = parse2(tokens)?;
     let element = get_element(&nodes, 0);
-    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().get(0) else {
+    let Some(NodeAttribute::Attribute(attribute)) = element.attributes().first() else {
         panic!("expected attribute")
     };
 
@@ -446,9 +446,8 @@ fn test_fn_bind_in_attribute() -> Result<()> {
 
     assert_eq!(attribute.key.to_string(), "bind:var");
 
-    let binding = match &attribute.possible_value {
-        KeyedAttributeValue::Binding(b) => b,
-        _ => unreachable!(),
+    let KeyedAttributeValue::Binding(binding) = &attribute.possible_value else {
+        unreachable!()
     };
     assert_eq!(binding.inputs.len(), 1);
     match binding.inputs.first().unwrap() {
@@ -470,9 +469,8 @@ fn test_fn_bind_with_type() -> Result<()> {
 
     assert_eq!(attribute.key.to_string(), "bind:var");
 
-    let binding = match &attribute.possible_value {
-        KeyedAttributeValue::Binding(b) => b,
-        _ => unreachable!(),
+    let KeyedAttributeValue::Binding(binding) = &attribute.possible_value else {
+        unreachable!()
     };
     assert_eq!(binding.inputs.len(), 1);
     match binding.inputs.first().unwrap() {
@@ -480,7 +478,7 @@ fn test_fn_bind_with_type() -> Result<()> {
             assert!(matches!(&*x.pat, syn::Pat::Ident(x) if x.ident == "x"));
             match &*x.ty {
                 syn::Type::Path(p) => {
-                    assert_eq!(p.path.segments.first().unwrap().ident.to_string(), "Y")
+                    assert_eq!(p.path.segments.first().unwrap().ident.to_string(), "Y");
                 }
                 _ => unreachable!(),
             }
@@ -502,9 +500,8 @@ fn test_fn_bind_mixed_types() -> Result<()> {
 
     assert_eq!(attribute.key.to_string(), "bind:var");
 
-    let binding = match &attribute.possible_value {
-        KeyedAttributeValue::Binding(b) => b,
-        _ => unreachable!(),
+    let KeyedAttributeValue::Binding(binding) = &attribute.possible_value else {
+        unreachable!()
     };
 
     assert_eq!(binding.to_token_stream().to_string(), "(x : Y , z)");
@@ -541,7 +538,7 @@ fn test_block_as_attribute() -> Result<()> {
 }
 
 #[test]
-fn test_number_of_top_level_nodes() -> Result<()> {
+fn test_number_of_top_level_nodes() {
     let tokens = quote! {
         <div />
         <div />
@@ -566,12 +563,10 @@ fn test_number_of_top_level_nodes() -> Result<()> {
     };
     let nodes = Parser::new(ParserConfig::new().number_of_top_level_nodes(2)).parse_simple(tokens);
     assert!(nodes.is_err());
-
-    Ok(())
 }
 
 #[test]
-fn test_type_of_top_level_nodes() -> Result<()> {
+fn test_type_of_top_level_nodes() {
     let tokens = quote! {
         "foo"
     };
@@ -579,8 +574,6 @@ fn test_type_of_top_level_nodes() -> Result<()> {
         .parse_simple(tokens);
 
     assert!(nodes.is_err());
-
-    Ok(())
 }
 
 #[test]
@@ -621,7 +614,7 @@ fn test_transform_block_some() -> Result<()> {
 }
 
 #[test]
-fn test_transform_block_none() -> Result<()> {
+fn test_transform_block_none() {
     let tokens = quote! {
         <div>{"foo"}</div>
     };
@@ -630,8 +623,6 @@ fn test_transform_block_none() -> Result<()> {
     let nodes = Parser::new(config).parse_simple(tokens);
 
     assert!(nodes.is_ok());
-
-    Ok(())
 }
 
 #[test]
@@ -643,7 +634,7 @@ fn test_doctype() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+    let Some(Node::Doctype(doctype)) = nodes.first() else {
         panic!("expected doctype")
     };
 
@@ -661,7 +652,7 @@ fn test_doctype_empty() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Doctype(doctype)) = nodes.get(0) else {
+    let Some(Node::Doctype(doctype)) = nodes.first() else {
         panic!("expected doctype")
     };
 
@@ -681,7 +672,7 @@ fn test_comment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Comment(comment1)) = nodes.get(0) else {
+    let Some(Node::Comment(comment1)) = nodes.first() else {
         panic!("expected comment")
     };
     let Node::Comment(comment2) = get_element_child(&nodes, 1, 0) else {
@@ -703,7 +694,7 @@ fn test_fragment() -> Result<()> {
     };
 
     let nodes = parse2(tokens)?;
-    let Some(Node::Fragment(fragment)) = nodes.get(0) else {
+    let Some(Node::Fragment(fragment)) = nodes.first() else {
         panic!("expected fragment")
     };
 
@@ -801,13 +792,12 @@ fn test_generics_closed() -> Result<()> {
 }
 
 #[test]
-fn test_generics_closed_not_match() -> Result<()> {
+fn test_generics_closed_not_match() {
     let tokens = quote! {
         <foo<Bar>> </foo<Baz>>
     };
     let e = parse2(tokens).unwrap_err();
     assert_eq!(e.to_string(), "close tag generics missmatch");
-    Ok(())
 }
 
 #[test]
@@ -915,7 +905,7 @@ fn test_default_wildcard_failed_to_parse_block() {
 }
 
 #[test]
-fn test_default_wildcard() -> Result<()> {
+fn test_default_wildcard() {
     let tokens = quote! {
         <{"block_element_name"}> </ _>
     };
@@ -928,11 +918,10 @@ fn test_default_wildcard() -> Result<()> {
         .unwrap()
         .name
         .is_wildcard());
-    Ok(())
 }
 
 #[test]
-fn test_default_wildcard_for_regular_element() -> Result<()> {
+fn test_default_wildcard_for_regular_element() {
     let tokens = quote! {
         <Foo> </ _>
     };
@@ -945,11 +934,10 @@ fn test_default_wildcard_for_regular_element() -> Result<()> {
         .unwrap()
         .name
         .is_wildcard());
-    Ok(())
 }
 
 #[test]
-fn test_custom_wildcard() -> Result<()> {
+fn test_custom_wildcard() {
     let tokens = quote! {
         <Foo> </ WILDCARD>
     };
@@ -963,7 +951,6 @@ fn test_custom_wildcard() -> Result<()> {
         .unwrap()
         .name
         .is_wildcard());
-    Ok(())
 }
 #[test]
 fn test_single_element_with_different_attributes() -> Result<()> {
@@ -998,7 +985,7 @@ fn test_single_element_with_different_attributes() -> Result<()> {
 }
 
 #[test]
-fn test_invalid_blocks() -> Result<()> {
+fn test_invalid_blocks() {
     // test that invalid blocks can be parsed in recoverable mode
     // usefull for IDEs
     let tokens = quote! {
@@ -1025,11 +1012,10 @@ fn test_invalid_blocks() -> Result<()> {
     assert!(node.children.is_empty());
     // TODO: Cleanup errors
     assert!(diagnostics.len() > 1);
-    Ok(())
 }
 
 #[test]
-fn test_invalid_blocks_in_attr() -> Result<()> {
+fn test_invalid_blocks_in_attr() {
     // test that invalid blocks can be parsed in recoverable mode
     // usefull for IDEs
     let tokens = quote! {
@@ -1061,7 +1047,6 @@ fn test_invalid_blocks_in_attr() -> Result<()> {
     let node = get_element(&nodes, 0);
     assert!(node.attributes().is_empty());
     assert_eq!(diagnostics.len(), 1);
-    Ok(())
 }
 
 #[test]

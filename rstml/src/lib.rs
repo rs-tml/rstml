@@ -1,4 +1,4 @@
-//! Rust templating for XML-based formats (HTML, SVG, MathML) implemented on top
+//! Rust templating for XML-based formats (HTML, SVG, `MathML`) implemented on top
 //! of [`proc-macro::TokenStream`]s. Similar to JSX but for Rust (commonly named
 //! RSX). The parsed result is a nested [`Node`] structure, similar to the
 //! browser DOM, where node name and value are syn expressions to support
@@ -71,7 +71,7 @@
 //! - **Unquoted text nodes**
 //!
 //! Unquoted text is supported with few limitations:
-//! - Only valid Rust TokenStream can be unquoted text (no single quote text is
+//! - Only valid Rust `TokenStream` can be unquoted text (no single quote text is
 //!   supported, no unclosed braces, etc.)
 //! - Unquoted text not always can save spaces. It uses [`Span::source_text`]
 //!   and [`Span::join`] to retrive info about spaces, and it is not always
@@ -198,17 +198,17 @@
 //! - **Customization**
 //!
 //!   A [`ParserConfig`] to customize parsing behavior is available, so if you
-//! have   slightly different requirements for parsing and it's not yet
-//! customizable   feel free to open an issue or pull request to extend the
-//! configuration.
+//!   have slightly different requirements for parsing and it's not yet
+//!   customizable feel free to open an issue or pull request to extend the
+//!   configuration.
 //!
 //!   One highlight with regards to customization is the [`transform_block`]
-//! configuration, which takes a closure that receives raw block content as
-//! `ParseStream` and lets you optionally convert it to a `TokenStream`. That
-//! makes it possible to have custom syntax in blocks. More details in [#9].
+//!   configuration, which takes a closure that receives raw block content as
+//!   `ParseStream` and lets you optionally convert it to a `TokenStream`. That
+//!   makes it possible to have custom syntax in blocks. More details in [#9].
 //!
 //!   Additionally, [`CustomNode`] can be used to implement fully custom
-//! parsing.
+//!   parsing.
 //!
 //! [`syn`]: /syn
 //! [`TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
@@ -243,6 +243,10 @@ pub use parser::{recoverable, recoverable::ParsingResult, Parser};
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree.
 ///
+/// # Errors
+///
+/// Returns a [`syn::Error`] if the input cannot be parsed as a valid node tree.
+///
 /// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
 /// [`Node`]: struct.Node.html
 pub fn parse(tokens: proc_macro::TokenStream) -> Result<Vec<Node>> {
@@ -251,6 +255,10 @@ pub fn parse(tokens: proc_macro::TokenStream) -> Result<Vec<Node>> {
 
 /// Parse the given [`proc-macro::TokenStream`] into a [`Node`] tree with custom
 /// [`ParserConfig`].
+///
+/// # Errors
+///
+/// Returns a [`syn::Error`] if the input cannot be parsed as a valid node tree.
 ///
 /// [`proc-macro::TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
 /// [`Node`]: struct.Node.html
@@ -264,6 +272,10 @@ pub fn parse_with_config<C: CustomNode + std::fmt::Debug>(
 }
 /// Parse the given [`proc-macro2::TokenStream`] into a [`Node`] tree.
 ///
+/// # Errors
+///
+/// Returns a [`syn::Error`] if the input cannot be parsed as a valid node tree.
+///
 /// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
 /// [`Node`]: struct.Node.html
 pub fn parse2(tokens: proc_macro2::TokenStream) -> Result<Vec<Node>> {
@@ -272,6 +284,10 @@ pub fn parse2(tokens: proc_macro2::TokenStream) -> Result<Vec<Node>> {
 
 /// Parse the given [`proc-macro2::TokenStream`] into a [`Node`] tree with
 /// custom [`ParserConfig`].
+///
+/// # Errors
+///
+/// Returns a [`syn::Error`] if the input cannot be parsed as a valid node tree.
 ///
 /// [`proc-macro2::TokenStream`]: https://docs.rs/proc-macro2/latest/proc_macro2/struct.TokenStream.html
 /// [`Node`]: struct.Node.html

@@ -46,16 +46,15 @@ fn test() {
                     <!-- "comment" -->
                     <div hello="planet"></div>
                     <div>1</div>
-                    <div>{}</div>
+                    <div>{unquoted_text}</div>
                     <div>3</div>
                     <div some-attribute-from-rust-block></div>
                 </body>
             </html>
-        "#,
-            unquoted_text
+        "#
         )
         .split('\n')
-        .map(|line| line.trim())
+        .map(str::trim)
         .collect::<Vec<&str>>()
         .join("")
     );

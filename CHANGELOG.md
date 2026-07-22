@@ -2,21 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.12.1] - 2025-01-21
+## [0.13.0] - 2026-07-22
 
 ### Chore
 
 - Update deps versions.
+- Add fix for merge tests.
+- Apply clippy fixups.
+
+### Features
+
+- Update to new syn version
+
+### Fix
+
+- Usage of unquoted comments, and package build
+- Update deps + fix new nightly line number format.
+- Fix typo
+- Rewrite parser for Generics in tag.
 
 ### Other
 
 - Update dependency versions.
+- Support HTML comments
+- Partial progress toward working const generic arguments
 
+### Refactor
+
+- Destructure WalkNodesOutput extend
 
 ## [0.12.0] - 2024-07-28
 
 ### Chore
 
+- Update html-to-macro example
+- Move ide feature of html-to-string example to separate macro.
+- Fix ci
+- Add powered by section in readme.
 - Fix ci
 - Fix clippy
 - Add example of custom node to html-to-string-macro.
@@ -32,6 +54,7 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- Allow disabling color diagnostics
 - Support for custom node
 - Parsing utilities for custom nodes
 - Add macro matcher
@@ -40,6 +63,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fix
 
+- Export NodeNameFragment
 - Fix imports in example
 - Empty input parsing
 - Make Recoverable field public.
@@ -49,54 +73,25 @@ All notable changes to this project will be documented in this file.
 
 ### Other
 
+- Coresponding -> corresponding
 - Use example from inline docs in readme
 - Address review
-
 - Allow multiple puncts in a row in NodeName
 - Added test for consecutive punctuation in NodeName
 
 Signed-off-by: max <gmx.sht@gmail.com>
-
 - Update README.md
 - Default impl for Parser ([#51](https://github.com/rs-tml/rstml/issues/51))
-
 - Initial implementation of block attributes
-
 - Implement braced key value attribute. See also: [#54](https://github.com/rs-tml/rstml/issues/54#issuecomment-2247924159)
-
 - Remove scratch
-
 - Rename KVAttributeValue::Braced -> KVAttributeValue::InvalidBraced
-
 
 ### Refactor
 
 - Refactor workspace move rstml to separate folder.
 
 Use workspace version of dependencies whenever is possible.
-
-
-## [0.11.1] - 2023-08-14
-
-### Chore
-
-- Update html-to-macro example
-- Move ide feature of html-to-string example to separate macro.
-- Fix ci
-- Add powered by section in readme.
-
-### Features
-
-- Allow disabling color diagnostics
-
-### Fix
-
-- Export NodeNameFragment
-
-### Other
-
-- Coresponding -> corresponding
-
 
 ## [0.11.0] - 2023-07-18
 
@@ -110,14 +105,12 @@ Use workspace version of dependencies whenever is possible.
 
 - Doc test formatting
 
-
 ### Features
 
 - Add generics support to node element.
 - FnBinding pattern
 - Feat: add number support in NodeName attribute
 Make NodeName compatible with SGML basic types specification (by adding support of more than one punctuation in series).
-
 
 ### Fix
 
@@ -127,9 +120,7 @@ Make NodeName compatible with SGML basic types specification (by adding support 
 
 - Update README.md
 - Allow wildcard close tag for block elements
-
 - Make block element close wildcard more general
-
 
 ## [0.10.5] - 2023-05-17
 
@@ -196,12 +187,10 @@ Make NodeName compatible with SGML basic types specification (by adding support 
 - Refactor: remove NodeValueExpr type
 NodeValueExpr was replaced by syn::Expr in all places where expr is needed.
 For places where {code} is expected NodeBlock was used.
-
 - Cleanup of parsing code.
 - Refactor recoverable parser.
 - Refactor: Remove tls context at all.
 Use RecoverableContext instead.
-
 
 ### Testing
 

@@ -127,11 +127,11 @@ impl ParseRecoverable for IfExpr {
         let mut else_ifs = vec![];
 
         while input.peek(Token![else]) && input.peek2(Token![if]) {
-            else_ifs.push(parser.parse_recoverable(input)?)
+            else_ifs.push(parser.parse_recoverable(input)?);
         }
         let mut else_branch = None;
         if input.peek(Token![else]) {
-            else_branch = Some(parser.parse_recoverable(input)?)
+            else_branch = Some(parser.parse_recoverable(input)?);
         }
         Some(IfExpr {
             keyword,
@@ -312,7 +312,7 @@ where
 pub mod visitor_impl {
     use rstml::visitor::{CustomNodeWalker, RustCode};
 
-    use super::*;
+    use super::{CustomNodeType, Visitor, EscapeCode, Block, ElseIf, Else, IfExpr, ForExpr, Arm, MatchExpr, EscapedExpr, Either, TryIntoOrCloneRef};
 
     pub struct EscapeCodeWalker;
     impl CustomNodeWalker for EscapeCodeWalker {
@@ -370,8 +370,7 @@ pub mod visitor_impl {
                 || expr
                     .else_branch
                     .as_mut()
-                    .map(|val| Else::visit_custom_children(visitor, val))
-                    .unwrap_or(true)
+                    .is_none_or(|val| Else::visit_custom_children(visitor, val))
         }
     }
     impl ForExpr {
@@ -635,7 +634,7 @@ mod test_typed {
         };
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
-        let node = expr.then_branch.body.iter().next().unwrap();
+        let node = expr.then_branch.body.first().unwrap();
         let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::If(expr) = &actual.expression else {
             panic!()
@@ -661,7 +660,7 @@ mod test_typed {
         };
 
         assert_eq!(expr.condition, parse_quote!(just && an || expression));
-        let node = expr.then_branch.body.iter().next().unwrap();
+        let node = expr.then_branch.body.first().unwrap();
         let Node::Custom(actual) = node else { panic!() };
         let EscapedExpr::For(expr) = &actual.expression else {
             panic!()
@@ -714,10 +713,7 @@ mod test_universal {
     fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
         use rstml::Parser;
 
-        let actual =
-            Parser::new(ParserConfig::new().custom_node::<EscapeCode>()).parse_recoverable(input);
-
-        return actual;
+        Parser::new(ParserConfig::new().custom_node::<EscapeCode>()).parse_recoverable(input)
     }
     #[cfg(feature = "extendable")]
     fn parse_universal(input: TokenStream) -> ParsingResult<Vec<Node>> {
@@ -757,6 +753,17 @@ mod test_universal {
     }
     #[test]
     fn if_node_visitor_rstml() {
+        struct ElementVisitor {
+            elements: Vec<String>,
+        }
+        impl VisitMut for ElementVisitor {}
+        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {
+            fn visit_element(&mut self, node: &mut rstml::node::NodeElement<C>) -> bool {
+                self.elements.push(node.open_tag.name.to_string());
+                true
+            }
+        }
+
         let tokens = quote! {
             @if just && an || expression {
                 <div/>
@@ -764,18 +771,6 @@ mod test_universal {
         };
 
         let mut actual = parse_universal(tokens).into_result().unwrap();
-
-        struct ElementVisitor {
-            elements: Vec<String>,
-        }
-        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {
-            fn visit_element(&mut self, node: &mut rstml::node::NodeElement<C>) -> bool {
-                self.elements.push(node.open_tag.name.to_string());
-                true
-            }
-        }
-        impl VisitMut for ElementVisitor {}
-
         let visitor = ElementVisitor {
             elements: Vec::new(),
         };
@@ -787,6 +782,16 @@ mod test_universal {
 
     #[test]
     fn if_node_visitor_syn_expr() {
+        struct ElementVisitor {
+            exprs: Vec<String>,
+        }
+        impl VisitMut for ElementVisitor {
+            fn visit_expr_mut(&mut self, exprs: &mut syn::Expr) {
+                self.exprs.push(exprs.to_token_stream().to_string());
+            }
+        }
+        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {}
+
         let tokens = quote! {
             @if just && an || expression {
                 <div/>
@@ -794,17 +799,6 @@ mod test_universal {
         };
 
         let mut actual = parse_universal(tokens).into_result().unwrap();
-
-        struct ElementVisitor {
-            exprs: Vec<String>,
-        }
-        impl<C: std::fmt::Debug> Visitor<C> for ElementVisitor {}
-        impl VisitMut for ElementVisitor {
-            fn visit_expr_mut(&mut self, exprs: &mut syn::Expr) {
-                self.exprs.push(exprs.to_token_stream().to_string());
-            }
-        }
-
         let visitor = ElementVisitor { exprs: Vec::new() };
         let elements =
             visit_nodes_with_custom::<_, _, EscapeCodeWalker>(&mut actual, visitor).exprs;

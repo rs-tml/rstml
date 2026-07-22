@@ -41,6 +41,7 @@ impl NodeBlock {
     /// {]}   // this is invalid syntax for rust compiler and rust analyzer so it will not be parsed at all.
     /// {x + y} // Valid syn Block, parsed as NodeBlock::Valid
     /// ```
+    #[must_use]
     pub fn try_block(&self) -> Option<&Block> {
         match self {
             Self::ValidBlock(b) => Some(b),

@@ -1,6 +1,6 @@
 use quote::{quote, TokenStreamExt};
 use rstml::{
-    atoms::{self, OpenTag, OpenTagEnd},
+    atoms::{self, OpenTag, OpenTagEnd, TagGenerics},
     node::{CustomNode, Node, NodeElement},
     recoverable::{ParseRecoverable, Recoverable},
     Parser, ParserConfig,
@@ -10,6 +10,7 @@ use syn::{parse_quote, Expr, Token};
 #[derive(Debug, syn_derive::ToTokens)]
 struct If {
     token_lt: Token![<],
+    #[allow(clippy::struct_field_names)]
     token_if: Token![if],
     condition: Expr,
     open_tag_end: OpenTagEnd,
@@ -34,8 +35,8 @@ impl ParseRecoverable for If {
                 &OpenTag {
                     token_lt,
                     name: parse_quote!(#token_if),
-                    generics: Default::default(),
-                    attributes: Default::default(),
+                    generics: TagGenerics::default(),
+                    attributes: Vec::default(),
                     end_tag: open_tag_end.clone(),
                 },
             )?

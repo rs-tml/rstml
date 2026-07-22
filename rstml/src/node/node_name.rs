@@ -87,6 +87,7 @@ impl NodeName {
     ///
     /// Example:
     /// {"Foo"}
+    #[must_use]
     pub fn is_block(&self) -> bool {
         matches!(self, Self::Block(_))
     }
@@ -95,6 +96,12 @@ impl NodeName {
     ///
     /// Example:
     /// foo-bar
+    ///
+    /// # Panics
+    ///
+    /// Panics if called on a punctuated name that has no pairs (should be
+    /// unreachable for well-formed names).
+    #[must_use]
     pub fn is_dashed(&self) -> bool {
         match self {
             Self::Punctuated(p) => {
@@ -109,6 +116,7 @@ impl NodeName {
     ///
     /// Example:
     /// _
+    #[must_use]
     pub fn is_wildcard(&self) -> bool {
         match self {
             Self::Path(e) => {
@@ -254,7 +262,7 @@ impl fmt::Display for NodeName {
                             Pair::Punctuated(ident, punct) => {
                                 [ident.to_string(), punct.to_string()]
                             }
-                            Pair::End(ident) => [ident.to_string(), "".to_string()],
+                            Pair::End(ident) => [ident.to_string(), String::new()],
                         })
                         .collect::<String>()
                 }

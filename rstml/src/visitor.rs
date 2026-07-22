@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use super::node::*;
+use super::node::{Node, NodeBlock, NodeComment, NodeDoctype, CustomNode, RawText, NodeText, NodeElement, NodeFragment, InvalidBlock, NodeName, NodeAttribute, KeyedAttribute, FnBinding, AttributeValueExpr, KeyedAttributeValue, KVAttributeValue};
 use crate::{
     atoms::{CloseTag, OpenTag},
     Infallible,
@@ -16,14 +16,14 @@ pub enum RustCode<'a> {
 }
 /// Visitor api provide a way to traverse the node tree and modify its
 /// components. The api allows modification of all types of nodes, and some
-/// atoms like InvalidBlock or NodeName.
+/// atoms like `InvalidBlock` or `NodeName`.
 ///
 /// Each method returns a bool that indicates if the visitor should continue to
 /// traverse the tree. If the method returns false, the visitor will stop
 /// traversing the tree.
 ///
-/// By default Visitor are abstract over CustomNode, but it is possible to
-/// implement a Visitor for concrete CustomNode.
+/// By default Visitor are abstract over `CustomNode`, but it is possible to
+/// implement a Visitor for concrete `CustomNode`.
 pub trait Visitor<Custom> {
     // Visit node types
     fn visit_node(&mut self, _node: &mut Node<Custom>) -> bool {
@@ -197,7 +197,7 @@ where
     visitor: V,
     // we use callbakc instead of marker for `CustomNodeWalker`
     // because it will fail to resolve with infinite recursion
-    walker: PhantomData<CW>,
+    custom_handler: PhantomData<CW>,
     _pd: PhantomData<C>,
 }
 
@@ -209,7 +209,7 @@ where
     pub fn new(visitor: V) -> Self {
         Self {
             visitor,
-            walker: PhantomData,
+            custom_handler: PhantomData,
             _pd: PhantomData,
         }
     }
@@ -219,7 +219,7 @@ where
     {
         Walker {
             visitor,
-            walker: PhantomData,
+            custom_handler: PhantomData,
             _pd: PhantomData,
         }
     }
@@ -294,10 +294,10 @@ where
         try_visit!(self.visit_open_tag(&mut node.open_tag));
 
         for attribute in node.attributes_mut() {
-            try_visit!(self.visit_attribute(attribute))
+            try_visit!(self.visit_attribute(attribute));
         }
         for child in node.children_mut() {
-            try_visit!(self.visit_node(child))
+            try_visit!(self.visit_node(child));
         }
 
         if let Some(close_tag) = &mut node.close_tag {
@@ -309,7 +309,7 @@ where
         visit_inner!(self.visitor.visit_fragment(node));
 
         for child in node.children_mut() {
-            try_visit!(self.visit_node(child))
+            try_visit!(self.visit_node(child));
         }
         true
     }
@@ -353,8 +353,8 @@ where
     fn visit_attribute_binding(&mut self, key: &mut NodeName, value: &mut FnBinding) -> bool {
         visit_inner!(self.visitor.visit_attribute_binding(key, value));
 
-        for input in value.inputs.iter_mut() {
-            try_visit!(self.visit_rust_code(RustCode::Pat(input)))
+        for input in &mut value.inputs {
+            try_visit!(self.visit_rust_code(RustCode::Pat(input)));
         }
         true
     }
@@ -491,7 +491,7 @@ mod tests {
         let node_names = visitor
             .collected_names
             .iter()
-            .map(|name| name.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -529,7 +529,7 @@ mod tests {
         let node_names = visitor
             .collected_names
             .iter()
-            .map(|name| name.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<_>>();
 
         assert_eq!(node_names, vec!["div", "span", "span", "foo"]);
@@ -607,7 +607,7 @@ mod tests {
         let raw_text = visitor
             .collected_raw_text
             .iter()
-            .map(|raw| raw.to_string_best())
+            .map(crate::node::RawText::to_string_best)
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -648,7 +648,7 @@ mod tests {
         let literals = visitor
             .collected_literals
             .iter()
-            .map(|lit| lit.value())
+            .map(syn::LitStr::value)
             .collect::<Vec<_>>();
 
         assert_eq!(literals, vec!["Some raw text", "And text after span"]);

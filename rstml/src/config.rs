@@ -32,17 +32,17 @@ pub struct ParserConfig<C = Infallible> {
 impl<C> Clone for ParserConfig<C> {
     fn clone(&self) -> Self {
         Self {
-            flat_tree: self.flat_tree.clone(),
+            flat_tree: self.flat_tree,
             number_of_top_level_nodes: self.number_of_top_level_nodes,
             type_of_top_level_nodes: self.type_of_top_level_nodes.clone(),
             transform_block: self.transform_block.clone(),
-            recover_block: self.recover_block.clone(),
+            recover_block: self.recover_block,
             always_self_closed_elements: self.always_self_closed_elements.clone(),
             raw_text_elements: self.raw_text_elements.clone(),
             element_close_wildcard: self.element_close_wildcard.clone(),
             #[cfg(feature = "rawtext-stable-hack")]
             macro_pattern: self.macro_pattern.clone(),
-            custom_node: self.custom_node.clone(),
+            custom_node: self.custom_node,
         }
     }
 }
@@ -50,17 +50,17 @@ impl<C> Clone for ParserConfig<C> {
 impl Default for ParserConfig {
     fn default() -> Self {
         Self {
-            flat_tree: Default::default(),
-            number_of_top_level_nodes: Default::default(),
-            type_of_top_level_nodes: Default::default(),
-            transform_block: Default::default(),
-            recover_block: Default::default(),
-            always_self_closed_elements: Default::default(),
-            raw_text_elements: Default::default(),
-            element_close_wildcard: Default::default(),
+            flat_tree: bool::default(),
+            number_of_top_level_nodes: Option::default(),
+            type_of_top_level_nodes: Option::default(),
+            transform_block: Option::default(),
+            recover_block: bool::default(),
+            always_self_closed_elements: HashSet::default(),
+            raw_text_elements: HashSet::default(),
+            element_close_wildcard: Option::default(),
             #[cfg(feature = "rawtext-stable-hack")]
-            macro_pattern: Default::default(),
-            custom_node: Default::default(),
+            macro_pattern: MacroPattern::default(),
+            custom_node: PhantomData,
         }
     }
 }
@@ -72,6 +72,7 @@ impl<C> Debug for ParserConfig<C> {
         s.field("flat_tree", &self.flat_tree)
             .field("number_of_top_level_nodes", &self.number_of_top_level_nodes)
             .field("type_of_top_level_nodes", &self.type_of_top_level_nodes)
+            .field("transform_block", &self.transform_block.is_some())
             .field("recover_block", &self.recover_block)
             .field(
                 "always_self_closed_elements",
@@ -84,12 +85,13 @@ impl<C> Debug for ParserConfig<C> {
             );
         #[cfg(feature = "rawtext-stable-hack")]
         s.field("macro_pattern", &self.macro_pattern);
-        s.finish()
+        s.field("custom_node", &self.custom_node).finish()
     }
 }
 
 impl ParserConfig {
     /// Create new `ParserConfig` with default config
+    #[must_use]
     pub fn new() -> ParserConfig {
         ParserConfig::default()
     }
@@ -97,18 +99,21 @@ impl ParserConfig {
 
 impl<C> ParserConfig<C> {
     /// Return flat tree instead of nested tree
+    #[must_use]
     pub fn flat_tree(mut self) -> Self {
         self.flat_tree = true;
         self
     }
 
     /// Exact number of required top level nodes
+    #[must_use]
     pub fn number_of_top_level_nodes(mut self, number: usize) -> Self {
         self.number_of_top_level_nodes = Some(number);
         self
     }
 
     /// Enforce the `NodeType` of top level nodes
+    #[must_use]
     pub fn type_of_top_level_nodes(mut self, node_type: NodeType) -> Self {
         self.type_of_top_level_nodes = Some(node_type);
         self
@@ -123,6 +128,7 @@ impl<C> ParserConfig<C> {
     /// invalid blocks, for example `{x.}` is invalid expression, because
     /// after dot token `}` is unexpected. But for ide it is a marker that
     /// quick completion should be provided.
+    #[must_use]
     pub fn recover_block(mut self, recover_block: bool) -> Self {
         self.recover_block = recover_block;
         self
@@ -138,6 +144,7 @@ impl<C> ParserConfig<C> {
     ///
     /// Examples:
     /// <br> <link> <img>
+    #[must_use]
     pub fn always_self_closed_elements(mut self, elements: HashSet<&'static str>) -> Self {
         self.always_self_closed_elements = elements;
         self
@@ -145,7 +152,7 @@ impl<C> ParserConfig<C> {
 
     /// Set array of nodes that is known to be parsed in two-phases,
     /// Parser will skip parsing of children nodes.
-    /// and provide one child with RawText instead.
+    /// and provide one child with `RawText` instead.
     ///
     /// This is usefull when parsing `<script>` or `<style>` tags elements.
     ///
@@ -153,6 +160,7 @@ impl<C> ParserConfig<C> {
     /// be inserted.
     ///
     /// Raw texts has few limitations, check out `RawText` documentation.
+    #[must_use]
     pub fn raw_text_elements(mut self, elements: HashSet<&'static str>) -> Self {
         self.raw_text_elements = elements;
         self
@@ -189,6 +197,7 @@ impl<C> ParserConfig<C> {
     ///
     /// parse2_with_config(tokens, config).unwrap();
     /// ```
+    #[must_use]
     pub fn transform_block<F>(mut self, callback: F) -> Self
     where
         F: Fn(ParseStream) -> Result<Option<TokenStream>> + 'static,
@@ -218,6 +227,7 @@ impl<C> ParserConfig<C> {
     ///
     /// Parser::new(config).parse_simple(tokens).unwrap();
     /// ```
+    #[must_use]
     pub fn element_close_wildcard<F>(mut self, predicate: F) -> Self
     where
         F: Fn(&OpenTag, &CloseTag) -> bool + 'static,
@@ -228,7 +238,8 @@ impl<C> ParserConfig<C> {
     /// Allows unmatched tag pairs where close tag matches a specified wildcard.
     ///
     /// Uses default wildcard ident (`_`), and optionally check whenewer
-    /// open_tag name is block.
+    /// `open_tag` name is block.
+    #[must_use]
     pub fn element_close_use_default_wildcard_ident(self, open_tag_should_be_block: bool) -> Self {
         self.element_close_wildcard(move |open_tag, close_tag| {
             close_tag.name.is_wildcard() && (!open_tag_should_be_block || open_tag.name.is_block())
@@ -240,7 +251,7 @@ impl<C> ParserConfig<C> {
     ///
     /// It is used with feature = "rawtext-stable-hack" to retrive
     /// space information in `RawText`.
-    /// Checkout https://github.com/rs-tml/rstml/issues/5 for details.
+    /// Checkout <https://github.com/rs-tml/rstml/issues/5> for details.
     ///
     ///
     /// This method receive macro pattern as `TokenStream`, uses tokens `%%`
@@ -267,12 +278,15 @@ impl<C> ParserConfig<C> {
     ///
     /// And rstml will do the rest for you.
     ///
-    /// Panics if no `%%` token was found.
+    /// If `macro_call_patern` is set rstml will parse input two times in order to
+    /// recover spaces in `RawText`.
     ///
-    /// If macro_call_patern is set rstml will parse input two times in order to
-    /// recover spaces in `RawText`. Rstml will panic if macro source text
-    /// is not possible to recover.
+    /// # Panics
+    ///
+    /// Panics if no `%%` token was found, or if macro source text is not
+    /// possible to recover.
     #[cfg(feature = "rawtext-stable-hack")]
+    #[must_use]
     pub fn macro_call_pattern(mut self, pattern: TokenStream) -> Self {
         self.macro_pattern =
             MacroPattern::from_token_stream(pattern).expect("No %% token found in pattern.");
@@ -281,6 +295,7 @@ impl<C> ParserConfig<C> {
 
     /// Enables parsing for [`Node::Custom`] using a type implementing
     /// [`CustomNode`].
+    #[must_use]
     pub fn custom_node<CN: CustomNode>(self) -> ParserConfig<CN> {
         ParserConfig {
             flat_tree: self.flat_tree,
@@ -293,7 +308,7 @@ impl<C> ParserConfig<C> {
             element_close_wildcard: self.element_close_wildcard,
             #[cfg(feature = "rawtext-stable-hack")]
             macro_pattern: self.macro_pattern,
-            custom_node: Default::default(),
+            custom_node: PhantomData,
         }
     }
 }

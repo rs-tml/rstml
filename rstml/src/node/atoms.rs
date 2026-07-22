@@ -107,6 +107,11 @@ pub struct FragmentClose {
 }
 
 impl FragmentClose {
+    ///
+    /// # Panics
+    ///
+    /// Panics if an identifier cannot be parsed after a successful peek (should
+    /// be unreachable).
     pub fn parse_with_start_tag(
         parser: &mut RecoverableContext,
         input: syn::parse::ParseStream,
@@ -120,7 +125,7 @@ impl FragmentClose {
                 Level::Error,
                 "expected fragment closing, found element closing tag",
             ));
-        };
+        }
         Some(Self {
             start_tag,
             token_gt: parser.parse_simple(input)?,
@@ -200,6 +205,7 @@ pub struct OpenTag {
 }
 
 impl OpenTag {
+    #[must_use]
     pub fn is_self_closed(&self) -> bool {
         self.end_tag.token_solidus.is_some()
     }

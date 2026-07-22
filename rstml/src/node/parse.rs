@@ -1,5 +1,5 @@
 //!
-//! Implementation of ToTokens and Spanned for node related structs
+//! Implementation of `ToTokens` and Spanned for node related structs
 
 use proc_macro2::{extra::DelimSpan, Delimiter, TokenStream};
 use proc_macro2_diagnostics2::{Diagnostic, Level};
@@ -194,10 +194,10 @@ impl<C: CustomNode> NodeElement<C> {
             let (child, closed_tag) =
                 parser.parse_with_ending(input, |_, t| RawText::from(t), CloseTag::parse);
             // don't keep empty RawText
-            let children = if !child.is_empty() {
-                vec![Node::RawText(child)]
-            } else {
+            let children = if child.is_empty() {
                 vec![]
+            } else {
+                vec![Node::RawText(child)]
             };
             (children, closed_tag)
         } else {
@@ -224,7 +224,9 @@ impl<C: CustomNode> NodeElement<C> {
             );
             if !children.is_empty() {
                 let mut note_span = TokenStream::new();
-                children.iter().for_each(|v| v.to_tokens(&mut note_span));
+                for v in &children {
+                    v.to_tokens(&mut note_span);
+                }
                 diagnostic = diagnostic.span_note(
                     note_span.span(),
                     "treating all inputs after open tag as it content",
@@ -250,7 +252,7 @@ impl<C: CustomNode> NodeElement<C> {
                         "open tag that should be closed; it's started here",
                     );
 
-                    parser.push_diagnostic(diagnostic)
+                    parser.push_diagnostic(diagnostic);
                 }
             }
         }
@@ -265,7 +267,7 @@ impl<C: CustomNode> NodeElement<C> {
                 Level::Help,
                 "open tag generics should match close tag generics",
             );
-            parser.push_diagnostic(diagnostic)
+            parser.push_diagnostic(diagnostic);
         }
         Some((children, Some(close_tag)))
     }
@@ -339,7 +341,7 @@ where
     I::Item: ToTokens,
 {
     use quote::TokenStreamExt;
-    input.append_all(iter)
+    input.append_all(iter);
 }
 
 /// Replace the next [`TokenTree::Group`] in the given parse stream with a

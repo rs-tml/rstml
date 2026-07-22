@@ -8,6 +8,7 @@ use proc_macro2::{Span, TokenStream, TokenTree};
 use crate::node::{CustomNode, Node};
 
 /// Returns true if join span is available.
+#[must_use]
 pub fn is_join_span_available() -> bool {
     let join_call_span = Span::call_site().join(Span::call_site()).is_some();
 
@@ -19,14 +20,15 @@ pub fn is_join_span_available() -> bool {
 
 /// Returns true if current macro call is available inside file.
 /// Returns false if it is from other macro call.
+#[must_use]
 pub fn is_macro_args_recoverable() -> bool {
     Span::call_site().source_text().is_some()
 }
 
 // Inject default text to every raw node, just to avoid panics.
 pub fn inject_raw_text_default<C: CustomNode>(source: &mut [Node<C>]) {
-    for source in source.into_iter() {
-        replace_node_default(source)
+    for source in source.iter_mut() {
+        replace_node_default(source);
     }
 }
 
@@ -41,19 +43,19 @@ pub fn inject_raw_text<C: CustomNode + std::fmt::Debug>(
         hacked.len(),
         "Second parsing return different result in recover_space_hack"
     );
-    for (source, hacked) in source.into_iter().zip(hacked) {
-        replace_node(source, hacked)
+    for (source, hacked) in source.iter_mut().zip(hacked) {
+        replace_node(source, hacked);
     }
 }
 
 pub fn replace_node_default<C: CustomNode>(source: &mut Node<C>) {
     match source {
-        Node::RawText(source )=> source.init_recover_space(String::from("")),
+        Node::RawText(source )=> source.init_recover_space(String::new()),
         Node::Fragment(source) => {
-            inject_raw_text_default(&mut source.children)
+            inject_raw_text_default(&mut source.children);
         }
         Node::Element(source) => {
-                        inject_raw_text_default(&mut source.children)
+                        inject_raw_text_default(&mut source.children);
         }
         Node::Doctype(_) | // => source.value.recover_space(&hacked.value),
         Node::Block(_)
@@ -65,12 +67,12 @@ pub fn replace_node_default<C: CustomNode>(source: &mut Node<C>) {
 
 pub fn replace_node<C: CustomNode + std::fmt::Debug>(source: &mut Node<C>, hacked: &Node<C>) {
     match (source, hacked) {
-        (Node::RawText(source), Node::RawText(hacked)) => source.recover_space(&hacked),
+        (Node::RawText(source), Node::RawText(hacked)) => source.recover_space(hacked),
         (Node::Fragment(source), Node::Fragment(hacked)) => {
-            inject_raw_text(&mut source.children, &hacked.children)
+            inject_raw_text(&mut source.children, &hacked.children);
         }
         (Node::Element(source), Node::Element(hacked)) => {
-            inject_raw_text(&mut source.children, &hacked.children)
+            inject_raw_text(&mut source.children, &hacked.children);
         }
         (Node::Doctype(_), Node::Doctype(_)) | // => source.value.recover_space(&hacked.value),
         (Node::Block(_), Node::Block(_))
@@ -79,8 +81,7 @@ pub fn replace_node<C: CustomNode + std::fmt::Debug>(source: &mut Node<C>, hacke
         | (Node::Text(_), Node::Text(_)) => {}
         (source, hacked) => {
             panic!(
-                "Mismatched node type in recover_space_hack {:?}, {:?}",
-                source, hacked
+                "Mismatched node type in recover_space_hack {source:?}, {hacked:?}"
             )
         }
     }
@@ -100,9 +101,11 @@ pub struct MacroPattern {
 }
 
 impl MacroPattern {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
+    #[must_use]
     pub fn skip_tokens(mut self, num_tokens: usize) -> Self {
         assert!(num_tokens > 0, "num_tokens should be > 0");
         if let Some(TokenStreamOperations::SkipToken(ref mut already_skipped)) =
@@ -116,18 +119,20 @@ impl MacroPattern {
         self
     }
 
+    #[must_use]
     pub fn unwrap_group(mut self) -> Self {
         self.macro_operations
             .push(TokenStreamOperations::UnwrapGroup);
         self
     }
 
+    #[must_use]
     pub fn skip_until(mut self, expected_stream: TokenStream) -> Self {
         self.macro_operations
             .push(TokenStreamOperations::SkipUntil(expected_stream));
         self
     }
-    /// Try to create `RecoverSpacePattern` from token_stream example.
+    /// Try to create `RecoverSpacePattern` from `token_stream` example.
     /// Find first occurence of '%%' tokens, and use its position in tokens as
     /// marker. Example:
     /// original macro:
@@ -142,13 +147,14 @@ impl MacroPattern {
     /// ))
     /// .unwrap()
     /// ```
+    #[must_use]
     pub fn from_token_stream(stream: TokenStream) -> Option<Self> {
         let mut pattern = MacroPattern::new();
         let mut stream = stream.into_iter();
 
         // skip any token before first '!'
         // to allow using macro with differnet paths.
-        while let Some(t) = stream.next() {
+        for t in stream.by_ref() {
             if let TokenTree::Punct(p) = t {
                 if p.as_char() == '!' {
                     break;
@@ -198,17 +204,18 @@ impl MacroPattern {
                 },
                 _ => {}
             }
-            pattern = pattern.skip_tokens(1)
+            pattern = pattern.skip_tokens(1);
         }
         None
     }
 
     /// Try to capture macro input from outer `TokenStream` using initialized
-    /// `MacroPattern`. Returns None if needed TokenTree::Group wasn't
+    /// `MacroPattern`. Returns None if needed `TokenTree::Group` wasn't
     /// found.
     ///
     /// "html!{/*content*/}" ==> "/*content*/"
     /// If pattern `is_empty` returns source stream.
+    #[must_use]
     pub fn match_content(&self, source: TokenStream) -> Option<TokenStream> {
         let mut stream = source.into_iter();
         for op in &self.macro_operations {
@@ -225,7 +232,7 @@ impl MacroPattern {
                 TokenStreamOperations::SkipUntil(expected) => 'compare: loop {
                     let needed = expected.clone().into_iter();
                     for expected in needed {
-                        let Some(t) = stream.next() else { return None };
+                        let t = stream.next()?;
 
                         if t.to_string() != expected.to_string() {
                             continue 'compare;
@@ -238,6 +245,7 @@ impl MacroPattern {
         Some(stream.collect())
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.macro_operations.is_empty()
     }

@@ -59,6 +59,7 @@ impl fmt::Display for NodeType {
 
 /// Node in the tree.
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Node<C = Infallible> {
     Comment(NodeComment),
     Doctype(NodeDoctype),
@@ -101,10 +102,9 @@ impl<C: CustomNode> Node<C> {
     /// Get the type of the node.
     pub fn r#type(&self) -> NodeType {
         match &self {
-            Self::Element(_) => NodeType::Element,
+            Self::Element(_) | Self::Doctype(_) => NodeType::Element,
             Self::Text(_) => NodeType::Text,
             Self::Comment(_) => NodeType::Comment,
-            Self::Doctype(_) => NodeType::Element,
             Self::Block(_) => NodeType::Block,
             Self::Fragment(_) => NodeType::Fragment,
             Self::RawText(_) => NodeType::RawText,
@@ -133,7 +133,7 @@ impl<C: CustomNode> Node<C> {
 
 /// Element node.
 ///
-/// A HTMLElement tag, with optional children and attributes.
+/// A `HTMLElement` tag, with optional children and attributes.
 /// Potentially selfclosing. Any tag name is valid.
 #[derive(Clone, Debug)]
 pub struct NodeElement<C> {
@@ -155,15 +155,18 @@ impl<C: CustomNode> ToTokens for NodeElement<C> {
 }
 
 impl<C: CustomNode> NodeElement<C> {
+    #[must_use]
     pub fn name(&self) -> &NodeName {
         &self.open_tag.name
     }
+    #[must_use]
     pub fn attributes(&self) -> &[NodeAttribute] {
         &self.open_tag.attributes
     }
     pub fn attributes_mut(&mut self) -> &mut Vec<NodeAttribute> {
         &mut self.open_tag.attributes
     }
+    #[must_use]
     pub fn children(&self) -> &[Node<C>] {
         &self.children
     }
@@ -182,7 +185,8 @@ pub struct NodeText {
 }
 
 impl NodeText {
-    /// Returns value of inner LitStr
+    /// Returns value of inner `LitStr`
+    #[must_use]
     pub fn value_string(&self) -> String {
         self.value.value()
     }
@@ -205,7 +209,7 @@ pub struct NodeComment {
 /// node value in this case.
 /// Usually doctype only contaim html, but also can contain arbitrary DOCTYPE
 /// legacy string, or "obsolete permitted DOCTYPE string", therewhy value is
-/// RawText.
+/// `RawText`.
 #[derive(Clone, Debug, syn_derive::ToTokens)]
 pub struct NodeDoctype {
     pub token_start: tokens::DocStart,
@@ -242,6 +246,7 @@ impl<C: CustomNode> ToTokens for NodeFragment<C> {
 }
 
 impl<C> NodeFragment<C> {
+    #[must_use]
     pub fn children(&self) -> &[Node<C>] {
         &self.children
     }

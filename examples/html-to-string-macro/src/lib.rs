@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Write};
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
@@ -27,7 +27,7 @@ struct WalkNodes<'a> {
     empty_elements: &'a HashSet<&'a str>,
     output: WalkNodesOutput,
 }
-impl<'a> WalkNodes<'a> {
+impl WalkNodes<'_> {
     fn child_output(&self) -> Self {
         Self {
             empty_elements: self.empty_elements,
@@ -51,17 +51,15 @@ impl WalkNodesOutput {
         self.collected_elements.extend(collected_elements);
     }
 }
-impl<'a> syn::visit_mut::VisitMut for WalkNodes<'a> {}
+impl syn::visit_mut::VisitMut for WalkNodes<'_> {}
 
-impl<'a, C> Visitor<C> for WalkNodes<'a>
+impl<C> Visitor<C> for WalkNodes<'_>
 where
     C: rstml::node::CustomNode + 'static,
 {
     fn visit_doctype(&mut self, doctype: &mut rstml::node::NodeDoctype) -> bool {
         let value = &doctype.value.to_token_stream_string();
-        self.output
-            .static_format
-            .push_str(&format!("<!DOCTYPE {}>", value));
+        let _ = write!(self.output.static_format, "<!DOCTYPE {value}>");
         false
     }
     fn visit_text_node(&mut self, node: &mut rstml::node::NodeText) -> bool {
@@ -83,10 +81,11 @@ where
     }
 
     fn visit_comment(&mut self, comment: &mut rstml::node::NodeComment) -> bool {
-        self.output.static_format.push_str(&format!(
+        let _ = write!(
+            self.output.static_format,
             "<!-- {} -->",
             comment.value.to_token_stream_string()
-        ));
+        );
         false
     }
     fn visit_block(&mut self, block: &mut rstml::node::NodeBlock) -> bool {
@@ -96,12 +95,12 @@ where
     }
     fn visit_element(&mut self, element: &mut rstml::node::NodeElement<C>) -> bool {
         let name = element.name().to_string();
-        self.output.static_format.push_str(&format!("<{}", name));
+        let _ = write!(self.output.static_format, "<{name}");
         self.output
             .collected_elements
             .push(element.open_tag.name.clone());
         if let Some(e) = &element.close_tag {
-            self.output.collected_elements.push(e.name.clone())
+            self.output.collected_elements.push(e.name.clone());
         }
 
         let visitor = self.child_output();
@@ -115,16 +114,18 @@ where
             .empty_elements
             .contains(element.open_tag.name.to_string().as_str())
         {
-            self.output
-                .static_format
-                .push_str(&format!("/</{}>", element.open_tag.name));
+            let _ = write!(
+                self.output.static_format,
+                "/</{}>",
+                element.open_tag.name
+            );
             if !element.children.is_empty() {
                 let warning = proc_macro2_diagnostics2::Diagnostic::spanned(
                     element.open_tag.name.span(),
                     proc_macro2_diagnostics2::Level::Warning,
                     "Element is processed as empty, and cannot have any child",
                 );
-                self.output.diagnostics.push(warning.emit_as_expr_tokens())
+                self.output.diagnostics.push(warning.emit_as_expr_tokens());
             }
 
             return false;
@@ -134,7 +135,7 @@ where
         let visitor = self.child_output();
         let child_output = visit_nodes(&mut element.children, visitor);
         self.output.extend(child_output.output);
-        self.output.static_format.push_str(&format!("</{}>", name));
+        let _ = write!(self.output.static_format, "</{name}>");
         false
     }
     fn visit_attribute(&mut self, attribute: &mut NodeAttribute) -> bool {
@@ -147,9 +148,7 @@ where
                 self.output.values.push(block.to_token_stream());
             }
             NodeAttribute::Attribute(attribute) => {
-                self.output
-                    .static_format
-                    .push_str(&format!(" {}", attribute.key));
+                let _ = write!(self.output.static_format, " {}", attribute.key);
                 if let Some(value) = attribute.value() {
                     self.output.static_format.push_str(r#"="{}""#);
                     self.output.values.push(value.to_token_stream());
@@ -234,7 +233,7 @@ fn html_inner(tokens: TokenStream, ide_helper: bool) -> TokenStream {
     };
     let errors = errors
         .into_iter()
-        .map(|e| e.emit_as_expr_tokens())
+        .map(proc_macro2_diagnostics2::Diagnostic::emit_as_expr_tokens)
         .chain(diagnostics);
     quote! {
         {
@@ -257,7 +256,7 @@ fn generate_tags_docs(elements: &[NodeName]) -> Vec<proc_macro2::TokenStream> {
         .collect();
 
     elements
-        .into_iter()
+        .iter()
         .map(|e| {
             if elements_as_type.contains(&*e.to_string()) {
                 let element = quote_spanned!(e.span() => enum);

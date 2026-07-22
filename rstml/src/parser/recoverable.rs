@@ -56,7 +56,7 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct RecoveryConfig {
     ///
-    /// Try to parse invalid syn::Block as something.
+    /// Try to parse invalid `syn::Block` as something.
     /// Usefull to make expressions more IDE-friendly.
     pub(crate) recover_block: bool,
     /// elements that has no child and is always self closed like <img> and <br>
@@ -88,6 +88,7 @@ impl Debug for RecoveryConfig {
                 &self.always_self_closed_elements,
             )
             .field("raw_text_elements", &self.raw_text_elements)
+            .field("transform_block", &self.transform_block.is_some())
             .field(
                 "element_close_wildcard",
                 &self.element_close_wildcard.is_some(),
@@ -115,18 +116,20 @@ impl PartialEq for RecoverableContext {
         self.diagnostics
             .iter()
             .zip(other.diagnostics.iter())
-            .all(|(a, b)| format!("{:?}", a) == format!("{:?}", b))
+            .all(|(a, b)| format!("{a:?}") == format!("{b:?}"))
     }
 }
 impl Eq for RecoverableContext {}
 
 impl RecoverableContext {
+    #[must_use]
     pub fn new(config: RecoveryConfig) -> Self {
         Self {
             diagnostics: vec![],
             config,
         }
     }
+    #[must_use]
     pub fn config(&self) -> &RecoveryConfig {
         &self.config
     }
@@ -204,7 +207,7 @@ pub enum ParsingResult<T> {
 }
 
 impl<T> ParsingResult<T> {
-    /// Create new ParsingResult from optional value and accumulated errors.
+    /// Create new `ParsingResult` from optional value and accumulated errors.
     pub fn from_parts(value: Option<T>, errors: Vec<Diagnostic>) -> Self {
         match (value, errors) {
             (Some(v), err) if err.is_empty() => Self::Ok(v),
@@ -218,6 +221,11 @@ impl<T> ParsingResult<T> {
     /// Ignores any diagnostic non error message when result is available.
     /// Returns Error on [`ParsingResult::Failed`], and
     /// [`ParsingResult::Partial`].
+    ///
+    /// # Errors
+    ///
+    /// Returns the first error diagnostic as a [`syn::Error`] when parsing
+    /// failed or was only partial.
     pub fn into_result(self) -> syn::Result<T> {
         match self {
             ParsingResult::Ok(r) => Ok(r),
@@ -233,9 +241,7 @@ impl<T> ParsingResult<T> {
                 .into()),
             ParsingResult::Partial(ok, errors) => {
                 if let Some(err) = errors
-                    .into_iter()
-                    .filter(|p| p.level() == Level::Error)
-                    .next()
+                    .into_iter().find(|p| p.level() == Level::Error)
                 {
                     Err(err.into())
                 } else {
@@ -271,10 +277,12 @@ impl<T> ParsingResult<T> {
 }
 
 impl<T> ParsingResult<Vec<T>> {
+    #[must_use]
     pub fn split_vec(self) -> (Vec<T>, Vec<Diagnostic>) {
         let (r, e) = self.split();
         (r.unwrap_or_default(), e)
     }
+    #[must_use]
     pub fn from_parts_vec(value: Vec<T>, errors: Vec<Diagnostic>) -> Self {
         match (value, errors) {
             (v, err) if err.is_empty() => Self::Ok(v),
@@ -286,8 +294,8 @@ impl<T> ParsingResult<Vec<T>> {
 
 impl<T> From<syn::Result<T>> for ParsingResult<T> {
     ///
-    /// Convert into syn::Result,
-    /// Returns Error on ParsingResult::Failed, and ParsingResult::Partial.
+    /// Convert into `syn::Result`,
+    /// Returns Error on `ParsingResult::Failed`, and `ParsingResult::Partial`.
     fn from(result: syn::Result<T>) -> ParsingResult<T> {
         match result {
             Result::Ok(r) => ParsingResult::Ok(r),
@@ -340,14 +348,14 @@ impl<T: ParseRecoverable> Parse for Recoverable<T> {
 /// tokens, and more diagnostic messages.
 ///
 /// - If input stream can be parsed to valid, or partially valid object
-/// [`Option::Some`] should be returned.
+///   [`Option::Some`] should be returned.
 ///
 /// - If object is parsed partially one can save
-/// diagnostic message in [`RecoverableContext`].
+///   diagnostic message in [`RecoverableContext`].
 ///
 /// - If object is failed to parse
-/// [`Option::None`] should be returned, and any message should be left in
-/// [`RecoverableContext`].
+///   [`Option::None`] should be returned, and any message should be left in
+///   [`RecoverableContext`].
 ///
 /// Instead of using [`RecoverableContext`] the interface can be changed to the
 /// following:

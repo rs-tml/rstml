@@ -82,7 +82,7 @@ impl<A, B> TryFrom<Either<A, B>> for EitherA<A, B> {
     fn try_from(value: Either<A, B>) -> Result<Self, Self::Error> {
         match value {
             Either::A(a) => Ok(EitherA(a, PhantomData)),
-            rest => Err(rest),
+            rest @ Either::B(_) => Err(rest),
         }
     }
 }
@@ -92,7 +92,7 @@ impl<A, B> TryFrom<Either<A, B>> for EitherB<A, B> {
     fn try_from(value: Either<A, B>) -> Result<Self, Self::Error> {
         match value {
             Either::B(b) => Ok(EitherB(PhantomData, b)),
-            rest => Err(rest),
+            rest @ Either::A(_) => Err(rest),
         }
     }
 }
