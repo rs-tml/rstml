@@ -312,7 +312,10 @@ where
 pub mod visitor_impl {
     use rstml::visitor::{CustomNodeWalker, RustCode};
 
-    use super::{CustomNodeType, Visitor, EscapeCode, Block, ElseIf, Else, IfExpr, ForExpr, Arm, MatchExpr, EscapedExpr, Either, TryIntoOrCloneRef};
+    use super::{
+        Arm, Block, CustomNodeType, Either, Else, ElseIf, EscapeCode, EscapedExpr, ForExpr, IfExpr,
+        MatchExpr, TryIntoOrCloneRef, Visitor,
+    };
 
     pub struct EscapeCodeWalker;
     impl CustomNodeWalker for EscapeCodeWalker {

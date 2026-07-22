@@ -240,9 +240,7 @@ impl<T> ParsingResult<T> {
                 })
                 .into()),
             ParsingResult::Partial(ok, errors) => {
-                if let Some(err) = errors
-                    .into_iter().find(|p| p.level() == Level::Error)
-                {
+                if let Some(err) = errors.into_iter().find(|p| p.level() == Level::Error) {
                     Err(err.into())
                 } else {
                     Ok(ok)
@@ -350,12 +348,11 @@ impl<T: ParseRecoverable> Parse for Recoverable<T> {
 /// - If input stream can be parsed to valid, or partially valid object
 ///   [`Option::Some`] should be returned.
 ///
-/// - If object is parsed partially one can save
-///   diagnostic message in [`RecoverableContext`].
-///
-/// - If object is failed to parse
-///   [`Option::None`] should be returned, and any message should be left in
+/// - If object is parsed partially one can save diagnostic message in
 ///   [`RecoverableContext`].
+///
+/// - If object is failed to parse [`Option::None`] should be returned, and any
+///   message should be left in [`RecoverableContext`].
 ///
 /// Instead of using [`RecoverableContext`] the interface can be changed to the
 /// following:

@@ -14,7 +14,10 @@ use {proc_macro2::Span, std::str::FromStr};
 use self::recoverable::{ParseRecoverable, ParsingResult, RecoverableContext};
 #[cfg(feature = "rawtext-stable-hack")]
 use crate::rawtext_stable_hack;
-use crate::{node::{Infallible, CustomNode, Node}, ParserConfig};
+use crate::{
+    node::{CustomNode, Infallible, Node},
+    ParserConfig,
+};
 ///
 /// Primary library interface to RSX Parser
 ///

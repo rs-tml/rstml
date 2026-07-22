@@ -1,6 +1,6 @@
-//! Rust templating for XML-based formats (HTML, SVG, `MathML`) implemented on top
-//! of [`proc-macro::TokenStream`]s. Similar to JSX but for Rust (commonly named
-//! RSX). The parsed result is a nested [`Node`] structure, similar to the
+//! Rust templating for XML-based formats (HTML, SVG, `MathML`) implemented on
+//! top of [`proc-macro::TokenStream`]s. Similar to JSX but for Rust (commonly
+//! named RSX). The parsed result is a nested [`Node`] structure, similar to the
 //! browser DOM, where node name and value are syn expressions to support
 //! building proc macros.
 //!
@@ -71,8 +71,8 @@
 //! - **Unquoted text nodes**
 //!
 //! Unquoted text is supported with few limitations:
-//! - Only valid Rust `TokenStream` can be unquoted text (no single quote text is
-//!   supported, no unclosed braces, etc.)
+//! - Only valid Rust `TokenStream` can be unquoted text (no single quote text
+//!   is supported, no unclosed braces, etc.)
 //! - Unquoted text not always can save spaces. It uses [`Span::source_text`]
 //!   and [`Span::join`] to retrive info about spaces, and it is not always
 //!   available.

@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
-use super::node::{Node, NodeBlock, NodeComment, NodeDoctype, CustomNode, RawText, NodeText, NodeElement, NodeFragment, InvalidBlock, NodeName, NodeAttribute, KeyedAttribute, FnBinding, AttributeValueExpr, KeyedAttributeValue, KVAttributeValue};
+use super::node::{
+    AttributeValueExpr, CustomNode, FnBinding, InvalidBlock, KVAttributeValue, KeyedAttribute,
+    KeyedAttributeValue, Node, NodeAttribute, NodeBlock, NodeComment, NodeDoctype, NodeElement,
+    NodeFragment, NodeName, NodeText, RawText,
+};
 use crate::{
     atoms::{CloseTag, OpenTag},
     Infallible,

@@ -357,8 +357,8 @@ impl ParseRecoverable for IfNode {
 }
 
 /// Conditions can be either if, else if, else, match or for
-/// Make sure to check `is_highlevel` before using, to avoid toplevel else/else if
-/// nodes.
+/// Make sure to check `is_highlevel` before using, to avoid toplevel else/else
+/// if nodes.
 #[derive(Clone, Debug)]
 pub enum Conditions {
     ElseIf(ElseIfNode),

@@ -278,8 +278,8 @@ impl<C> ParserConfig<C> {
     ///
     /// And rstml will do the rest for you.
     ///
-    /// If `macro_call_patern` is set rstml will parse input two times in order to
-    /// recover spaces in `RawText`.
+    /// If `macro_call_patern` is set rstml will parse input two times in order
+    /// to recover spaces in `RawText`.
     ///
     /// # Panics
     ///

@@ -114,11 +114,7 @@ where
             .empty_elements
             .contains(element.open_tag.name.to_string().as_str())
         {
-            let _ = write!(
-                self.output.static_format,
-                "/</{}>",
-                element.open_tag.name
-            );
+            let _ = write!(self.output.static_format, "/</{}>", element.open_tag.name);
             if !element.children.is_empty() {
                 let warning = proc_macro2_diagnostics2::Diagnostic::spanned(
                     element.open_tag.name.span(),

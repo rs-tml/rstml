@@ -133,12 +133,10 @@ impl KeyedAttribute {
 
     #[must_use]
     pub fn value(&self) -> Option<&Expr> {
-        self.possible_value
-            .to_value()
-            .and_then(|v| match &v.value {
-                KVAttributeValue::Expr(expr) => Some(expr),
-                KVAttributeValue::InvalidBraced(_) => None,
-            })
+        self.possible_value.to_value().and_then(|v| match &v.value {
+            KVAttributeValue::Expr(expr) => Some(expr),
+            KVAttributeValue::InvalidBraced(_) => None,
+        })
     }
 
     // Checks if error is about eof.
