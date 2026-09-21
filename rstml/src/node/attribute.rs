@@ -15,13 +15,13 @@ use crate::{
     parser::recoverable::{ParseRecoverable, RecoverableContext},
 };
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct AttributeValueExpr {
     pub token_eq: Token![=],
     pub value: KVAttributeValue,
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum KVAttributeValue {
     Expr(Expr),
     InvalidBraced(InvalidBlock),
@@ -69,7 +69,7 @@ impl AttributeValueExpr {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum KeyedAttributeValue {
     Binding(FnBinding),
     Value(AttributeValueExpr),
@@ -91,7 +91,7 @@ impl KeyedAttributeValue {
 /// Example:
 /// key=value // attribute with ident as value
 /// key // attribute without value
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct KeyedAttribute {
     /// Key of the element attribute.
     pub key: NodeName,
@@ -203,7 +203,7 @@ fn closure_arg(input: ParseStream) -> syn::Result<Pat> {
 /// Sum type for Dyn and Keyed attributes.
 ///
 /// Attributes is stored in opening tags.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum NodeAttribute {
     ///
@@ -324,5 +324,47 @@ impl ToTokens for FnBinding {
         self.paren.surround(tokens, |tokens| {
             self.inputs.to_tokens(tokens);
         });
+    }
+}
+
+impl ToTokens for AttributeValueExpr {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token_eq.to_tokens(tokens);
+        self.value.to_tokens(tokens);
+    }
+}
+
+impl ToTokens for KVAttributeValue {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Expr(expr) => expr.to_tokens(tokens),
+            Self::InvalidBraced(block) => block.to_tokens(tokens),
+        }
+    }
+}
+
+impl ToTokens for KeyedAttributeValue {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Binding(binding) => binding.to_tokens(tokens),
+            Self::Value(value) => value.to_tokens(tokens),
+            Self::None => {}
+        }
+    }
+}
+
+impl ToTokens for KeyedAttribute {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.key.to_tokens(tokens);
+        self.possible_value.to_tokens(tokens);
+    }
+}
+
+impl ToTokens for NodeAttribute {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Block(block) => block.to_tokens(tokens),
+            Self::Attribute(attribute) => attribute.to_tokens(tokens),
+        }
     }
 }

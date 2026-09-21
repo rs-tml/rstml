@@ -21,6 +21,32 @@ use syn::{
 };
 
 #[test]
+fn test_tokens_round_trip() -> Result<()> {
+    let tokens = quote! {
+        <!DOCTYPE html>
+        <!-- "comment" -->
+        <>
+            <component<T> disabled data-value=42 bind(value) {attributes}>
+                <a--::..d />
+                "text"
+                { value }
+            </component<T>>
+        </>
+    };
+    let nodes = parse2(tokens.clone())?;
+
+    // Compare individual tokens because syn normalizes punctuation spacing.
+    let token_strings = |tokens: TokenStream| {
+        tokens
+            .into_iter()
+            .map(|token| token.to_string())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(token_strings(quote!(#(#nodes)*)), token_strings(tokens));
+    Ok(())
+}
+
+#[test]
 fn test_single_empty_element() -> Result<()> {
     let tokens = quote! {
         <foo></foo>

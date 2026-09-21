@@ -3,7 +3,8 @@ use std::{
     fmt::{self, Display},
 };
 
-use proc_macro2::Punct;
+use proc_macro2::{Punct, TokenStream};
+use quote::ToTokens;
 use syn::{
     ext::IdentExt,
     parse::{discouraged::Speculative, Parse, ParseStream, Peek},
@@ -15,11 +16,9 @@ use syn::{
 use super::{atoms::tokens::Dash, path_to_string};
 use crate::{node::parse::block_expr, Error};
 
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum NodeNameFragment {
-    #[parse(peek = Ident::peek_any)]
-    Ident(#[parse(Ident::parse_any)] Ident),
-    #[parse(peek = LitInt)]
+    Ident(Ident),
     Literal(LitInt),
     // In case when name contain more than one Punct in series
     Empty,
@@ -52,7 +51,7 @@ impl Display for NodeNameFragment {
 }
 
 /// Name of the node.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum NodeName {
     /// A plain identifier like `div` is a path of length 1, e.g. `<div />`. Can
     /// be separated by double colons, e.g. `<foo::bar />`.
@@ -321,6 +320,38 @@ impl Parse for NodeName {
             }))
         } else {
             Err(input.error("invalid tag name or attribute key"))
+        }
+    }
+}
+
+impl Parse for NodeNameFragment {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(Ident::peek_any) {
+            Ok(Self::Ident(input.call(Ident::parse_any)?))
+        } else if input.peek(LitInt) {
+            Ok(Self::Literal(input.parse()?))
+        } else {
+            Ok(Self::Empty)
+        }
+    }
+}
+
+impl ToTokens for NodeNameFragment {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Ident(ident) => ident.to_tokens(tokens),
+            Self::Literal(literal) => literal.to_tokens(tokens),
+            Self::Empty => {}
+        }
+    }
+}
+
+impl ToTokens for NodeName {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Path(path) => path.to_tokens(tokens),
+            Self::Punctuated(name) => name.to_tokens(tokens),
+            Self::Block(block) => block.to_tokens(tokens),
         }
     }
 }

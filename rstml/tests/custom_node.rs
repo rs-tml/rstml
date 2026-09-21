@@ -1,4 +1,4 @@
-use quote::{quote, TokenStreamExt};
+use quote::{quote, ToTokens, TokenStreamExt};
 use rstml::{
     atoms::{self, OpenTag, OpenTagEnd, TagGenerics},
     node::{CustomNode, Node, NodeElement},
@@ -7,17 +7,28 @@ use rstml::{
 };
 use syn::{parse_quote, Expr, Token};
 
-#[derive(Debug, syn_derive::ToTokens)]
+#[derive(Debug)]
 struct If {
     token_lt: Token![<],
     #[allow(clippy::struct_field_names)]
     token_if: Token![if],
     condition: Expr,
     open_tag_end: OpenTagEnd,
-    #[to_tokens(TokenStreamExt::append_all)]
     body: Vec<Node>,
     close_tag: Option<atoms::CloseTag>,
 }
+
+impl ToTokens for If {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_if.to_tokens(tokens);
+        self.condition.to_tokens(tokens);
+        self.open_tag_end.to_tokens(tokens);
+        tokens.append_all(&self.body);
+        self.close_tag.to_tokens(tokens);
+    }
+}
+
 impl ParseRecoverable for If {
     fn parse_recoverable(
         parser: &mut rstml::recoverable::RecoverableContext,
