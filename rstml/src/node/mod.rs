@@ -5,10 +5,20 @@ use std::{convert, fmt};
 use atoms::{tokens, FragmentClose, FragmentOpen};
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{
-    parse::{Parse, ParseStream},
-    ExprPath, LitStr, Token,
-};
+use syn::{parse::ParseStream, ExprPath, LitStr, Token};
+
+// Parse fields in the listed order, stopping at the first error.
+macro_rules! impl_parse {
+    ($ty:ident, $($field:ident),+ $(,)?) => {
+        impl syn::parse::Parse for $ty {
+            fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+                Ok(Self {
+                    $($field: input.parse()?,)*
+                })
+            }
+        }
+    };
+}
 
 // Emit fields in the listed order; require every field to be listed.
 macro_rules! impl_to_tokens {
@@ -199,14 +209,7 @@ pub struct NodeText {
     pub value: LitStr,
 }
 
-impl Parse for NodeText {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            value: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(NodeText, value);
 impl_to_tokens!(NodeText, value);
 
 impl NodeText {

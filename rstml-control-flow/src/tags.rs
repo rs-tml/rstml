@@ -137,16 +137,7 @@ pub struct ElseIfCloseTag {
     pub token_gt: Token![>],
 }
 
-impl Parse for ElseIfCloseTag {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            start_tag: input.parse()?,
-            token_else_if: input.parse()?,
-            token_gt: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(ElseIfCloseTag, start_tag, token_else_if, token_gt);
 impl_to_tokens!(ElseIfCloseTag, start_tag, token_else_if, token_gt);
 
 impl ElseIfCloseTag {
@@ -189,15 +180,7 @@ pub struct ElseIfToken {
     pub token_if: Token![if],
 }
 
-impl Parse for ElseIfToken {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            token_else: input.parse()?,
-            token_if: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(ElseIfToken, token_else, token_if);
 impl_to_tokens!(ElseIfToken, token_else, token_if);
 
 #[derive(Clone, Debug)]

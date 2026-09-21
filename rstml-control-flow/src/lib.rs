@@ -7,6 +7,19 @@ use std::marker::PhantomData;
 use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
 
+// Parse fields in the listed order, stopping at the first error.
+macro_rules! impl_parse {
+    ($ty:ident, $($field:ident),+ $(,)?) => {
+        impl syn::parse::Parse for $ty {
+            fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+                Ok(Self {
+                    $($field: input.parse()?,)*
+                })
+            }
+        }
+    };
+}
+
 // Emit fields in the listed order; require every field to be listed.
 macro_rules! impl_to_tokens {
     ($ty:ident, $($field:ident),+ $(,)?) => {

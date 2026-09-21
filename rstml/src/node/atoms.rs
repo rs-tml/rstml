@@ -10,11 +10,7 @@
 use proc_macro2::{Ident, TokenStream};
 use proc_macro2_diagnostics2::{Diagnostic, Level};
 use quote::ToTokens;
-use syn::{
-    ext::IdentExt,
-    parse::{Parse, ParseStream},
-    Token,
-};
+use syn::{ext::IdentExt, Token};
 
 use crate::{
     node::{parse, NodeAttribute, NodeName},
@@ -60,15 +56,7 @@ pub(crate) mod tokens {
         pub token_not: Token![!],
     }
 
-    impl Parse for DocStart {
-        fn parse(input: ParseStream) -> syn::Result<Self> {
-            Ok(Self {
-                token_lt: input.parse()?,
-                token_not: input.parse()?,
-            })
-        }
-    }
-
+    impl_parse!(DocStart, token_lt, token_not);
     impl_to_tokens!(DocStart, token_lt, token_not);
 
     /// Start part of comment tag
@@ -130,15 +118,7 @@ pub(crate) mod tokens {
         pub token_gt: Token![>],
     }
 
-    impl Parse for OpenTagEnd {
-        fn parse(input: ParseStream) -> syn::Result<Self> {
-            Ok(Self {
-                token_solidus: input.parse()?,
-                token_gt: input.parse()?,
-            })
-        }
-    }
-
+    impl_parse!(OpenTagEnd, token_solidus, token_gt);
     impl_to_tokens!(OpenTagEnd, token_solidus, token_gt);
 
     /// Start part of element's close tag.
@@ -150,15 +130,7 @@ pub(crate) mod tokens {
         pub token_solidus: Token![/],
     }
 
-    impl Parse for CloseTagStart {
-        fn parse(input: ParseStream) -> syn::Result<Self> {
-            Ok(Self {
-                token_lt: input.parse()?,
-                token_solidus: input.parse()?,
-            })
-        }
-    }
-
+    impl_parse!(CloseTagStart, token_lt, token_solidus);
     impl_to_tokens!(CloseTagStart, token_lt, token_solidus);
 }
 
@@ -172,15 +144,7 @@ pub struct FragmentOpen {
     pub token_gt: Token![>],
 }
 
-impl Parse for FragmentOpen {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            token_lt: input.parse()?,
-            token_gt: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(FragmentOpen, token_lt, token_gt);
 impl_to_tokens!(FragmentOpen, token_lt, token_gt);
 
 /// Fragment close part
@@ -191,15 +155,7 @@ pub struct FragmentClose {
     pub token_gt: Token![>],
 }
 
-impl Parse for FragmentClose {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            start_tag: input.parse()?,
-            token_gt: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(FragmentClose, start_tag, token_gt);
 impl_to_tokens!(FragmentClose, start_tag, token_gt);
 
 impl FragmentClose {
@@ -327,17 +283,7 @@ pub struct CloseTag {
     pub token_gt: Token![>],
 }
 
-impl Parse for CloseTag {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            start_tag: input.parse()?,
-            name: input.parse()?,
-            generics: input.parse()?,
-            token_gt: input.parse()?,
-        })
-    }
-}
-
+impl_parse!(CloseTag, start_tag, name, generics, token_gt);
 impl_to_tokens!(CloseTag, start_tag, name, generics, token_gt);
 
 impl CloseTag {
