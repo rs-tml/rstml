@@ -31,13 +31,17 @@ type CustomNodeType = crate::ExtendableCustomNode;
 
 type Node = RNode<CustomNodeType>;
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct Block {
-    #[syn(braced)]
     pub brace_token: Brace,
-    #[syn(in = brace_token)]
-    #[to_tokens(|tokens, val| tokens.append_all(val))]
     pub body: Vec<Node>,
+}
+
+impl ToTokens for Block {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.brace_token
+            .surround(tokens, |tokens| tokens.append_all(&self.body));
+    }
 }
 
 impl ParseRecoverable for Block {
@@ -60,12 +64,21 @@ impl ParseRecoverable for Block {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct ElseIf {
     pub else_token: Token![else],
     pub if_token: Token![if],
     pub condition: Expr,
     pub then_branch: Block,
+}
+
+impl ToTokens for ElseIf {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.else_token.to_tokens(tokens);
+        self.if_token.to_tokens(tokens);
+        self.condition.to_tokens(tokens);
+        self.then_branch.to_tokens(tokens);
+    }
 }
 
 impl ParseRecoverable for ElseIf {
@@ -81,11 +94,19 @@ impl ParseRecoverable for ElseIf {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct Else {
     pub else_token: Token![else],
     pub then_branch: Block,
 }
+
+impl ToTokens for Else {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.else_token.to_tokens(tokens);
+        self.then_branch.to_tokens(tokens);
+    }
+}
+
 impl ParseRecoverable for Else {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         Some(Else {
@@ -105,14 +126,23 @@ impl ParseRecoverable for Else {
 ///
 /// As in rust can contain arbitrary amount of `else if .. {..}` constructs and
 /// one `else {..}`.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct IfExpr {
     pub keyword: Token![if],
     pub condition: Expr,
     pub then_branch: Block,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub else_ifs: Vec<ElseIf>,
     pub else_branch: Option<Else>,
+}
+
+impl ToTokens for IfExpr {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.keyword.to_tokens(tokens);
+        self.condition.to_tokens(tokens);
+        self.then_branch.to_tokens(tokens);
+        tokens.append_all(&self.else_ifs);
+        self.else_branch.to_tokens(tokens);
+    }
 }
 
 impl ParseRecoverable for IfExpr {
@@ -143,13 +173,23 @@ impl ParseRecoverable for IfExpr {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct ForExpr {
     pub keyword: Token![for],
     pub pat: Pat,
     pub token_in: Token![in],
     pub expr: Expr,
     pub block: Block,
+}
+
+impl ToTokens for ForExpr {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.keyword.to_tokens(tokens);
+        self.pat.to_tokens(tokens);
+        self.token_in.to_tokens(tokens);
+        self.expr.to_tokens(tokens);
+        self.block.to_tokens(tokens);
+    }
 }
 
 impl ParseRecoverable for ForExpr {
@@ -173,13 +213,22 @@ impl ParseRecoverable for ForExpr {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct Arm {
     pub pat: Pat,
     // pub guard: Option<(If, Box<Expr>)>,
     pub fat_arrow_token: Token![=>],
     pub body: Block,
     pub comma: Option<Token![,]>,
+}
+
+impl ToTokens for Arm {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.pat.to_tokens(tokens);
+        self.fat_arrow_token.to_tokens(tokens);
+        self.body.to_tokens(tokens);
+        self.comma.to_tokens(tokens);
+    }
 }
 
 impl ParseRecoverable for Arm {
@@ -200,15 +249,21 @@ impl ParseRecoverable for Arm {
 //     | x => {}
 // }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct MatchExpr {
     pub keyword: Token![match],
     pub expr: Expr,
-    #[syn(braced)]
     pub brace_token: Brace,
-    #[syn(in = brace_token)]
-    #[to_tokens(TokenStreamExt::append_all)]
     pub arms: Vec<Arm>,
+}
+
+impl ToTokens for MatchExpr {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.keyword.to_tokens(tokens);
+        self.expr.to_tokens(tokens);
+        self.brace_token
+            .surround(tokens, |tokens| tokens.append_all(&self.arms));
+    }
 }
 
 impl ParseRecoverable for MatchExpr {
@@ -243,11 +298,21 @@ impl ParseRecoverable for MatchExpr {
 // Minimal version of syn::Expr, that uses custom `Block` with `Node` array
 // instead of `syn::Block` that contain valid rust code.
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum EscapedExpr {
     If(IfExpr),
     For(ForExpr),
     Match(MatchExpr),
+}
+
+impl ToTokens for EscapedExpr {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::If(expr) => expr.to_tokens(tokens),
+            Self::For(expr) => expr.to_tokens(tokens),
+            Self::Match(expr) => expr.to_tokens(tokens),
+        }
+    }
 }
 
 impl ParseRecoverable for EscapedExpr {
@@ -279,10 +344,17 @@ impl TryIntoOrCloneRef<EscapeCode> for crate::ExtendableCustomNode {
     }
 }
 
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct EscapeCode<T: ToTokens = Token![@]> {
     pub escape_token: T,
     pub expression: EscapedExpr,
+}
+
+impl<T: ToTokens> ToTokens for EscapeCode<T> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.escape_token.to_tokens(tokens);
+        self.expression.to_tokens(tokens);
+    }
 }
 
 impl<T: ToTokens + Parse> ParseRecoverable for EscapeCode<T> {
@@ -738,10 +810,21 @@ mod test_universal {
         let tokens = quote! {
             @if just && an || expression {
                 <div/>
+                @for value in values {
+                    @match value {
+                        0 => {<zero/>},
+                        _ => {<other/>}
+                    }
+                }
+            } else if fallback {
+                <fallback/>
+            } else {
+                <default/>
             }
         };
 
-        let actual = &parse_universal(tokens).into_result().unwrap()[0];
+        let actual = &parse_universal(tokens.clone()).into_result().unwrap()[0];
+        assert_eq!(actual.to_token_stream().to_string(), tokens.to_string());
 
         let Node::Custom(actual) = actual else {
             panic!()

@@ -5,7 +5,10 @@ use std::{convert, fmt};
 use atoms::{tokens, FragmentClose, FragmentOpen};
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
-use syn::{parse::ParseStream, ExprPath, LitStr, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    ExprPath, LitStr, Token,
+};
 
 pub mod atoms;
 mod attribute;
@@ -178,10 +181,24 @@ impl<C: CustomNode> NodeElement<C> {
 /// Text node.
 ///
 /// Quoted text. Unquoted can be found in `RawText`.
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct NodeText {
     /// The text value.
     pub value: LitStr,
+}
+
+impl Parse for NodeText {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            value: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for NodeText {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.value.to_tokens(tokens);
+    }
 }
 
 impl NodeText {
@@ -196,13 +213,22 @@ impl NodeText {
 ///
 /// Comment: `<!-- comment -->`. It is recommended to use quoted text
 /// for comments, since it is parsed as `TokenStream`.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct NodeComment {
     pub token_start: tokens::ComStart,
     /// The comment value.
     pub value: RawText,
     pub token_end: tokens::ComEnd,
 }
+
+impl ToTokens for NodeComment {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token_start.to_tokens(tokens);
+        self.value.to_tokens(tokens);
+        self.token_end.to_tokens(tokens);
+    }
+}
+
 /// Doctype node.
 ///
 /// Doctype declaration: `<!DOCTYPE html>` (case insensitive), `html` is the
@@ -210,7 +236,7 @@ pub struct NodeComment {
 /// Usually doctype only contaim html, but also can contain arbitrary DOCTYPE
 /// legacy string, or "obsolete permitted DOCTYPE string", therewhy value is
 /// `RawText`.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct NodeDoctype {
     pub token_start: tokens::DocStart,
     /// "doctype"
@@ -218,6 +244,15 @@ pub struct NodeDoctype {
     /// The doctype value.
     pub value: RawText,
     pub token_end: Token![>],
+}
+
+impl ToTokens for NodeDoctype {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token_start.to_tokens(tokens);
+        self.token_doctype.to_tokens(tokens);
+        self.value.to_tokens(tokens);
+        self.token_end.to_tokens(tokens);
+    }
 }
 
 /// Fragement node.

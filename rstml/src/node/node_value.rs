@@ -3,20 +3,23 @@
 use std::convert::TryFrom;
 
 use proc_macro2::TokenStream;
-use syn::{token::Brace, Block};
+use quote::ToTokens;
+use syn::{
+    parse::{Parse, ParseStream},
+    token::Brace,
+    Block,
+};
 
-#[derive(Clone, Debug, syn_derive::ToTokens, syn_derive::Parse)]
+#[derive(Clone, Debug)]
 pub struct InvalidBlock {
-    #[syn(braced)]
     pub brace: Brace,
-    #[syn(in = brace)]
     pub body: TokenStream,
 }
 
 /// Block node.
 ///
 /// Arbitrary rust code in braced `{}` blocks.
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub enum NodeBlock {
     /// The block value..
     ValidBlock(Block),
@@ -59,6 +62,33 @@ impl TryFrom<NodeBlock> for Block {
                 v,
                 "Cant parse expression as block.",
             )),
+        }
+    }
+}
+
+impl Parse for InvalidBlock {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        Ok(Self {
+            brace: syn::braced!(content in input),
+            body: content.parse()?,
+        })
+    }
+}
+
+impl ToTokens for InvalidBlock {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.brace.surround(tokens, |tokens| {
+            self.body.to_tokens(tokens);
+        });
+    }
+}
+
+impl ToTokens for NodeBlock {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::ValidBlock(block) => block.to_tokens(tokens),
+            Self::Invalid(block) => block.to_tokens(tokens),
         }
     }
 }

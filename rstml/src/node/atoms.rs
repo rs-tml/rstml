@@ -7,9 +7,14 @@
 //! like: `<open_tag attr />`
 //! `</close_tag>`
 
-use proc_macro2::Ident;
+use proc_macro2::{Ident, TokenStream};
 use proc_macro2_diagnostics2::{Diagnostic, Level};
-use syn::{ext::IdentExt, Token};
+use quote::ToTokens;
+use syn::{
+    ext::IdentExt,
+    parse::{Parse, ParseStream},
+    Token,
+};
 
 use crate::{
     node::{parse, NodeAttribute, NodeName},
@@ -18,7 +23,13 @@ use crate::{
 
 pub(crate) mod tokens {
     //! Custom syn punctuations
-    use syn::{custom_punctuation, Token};
+    use proc_macro2::TokenStream;
+    use quote::ToTokens;
+    use syn::{
+        custom_punctuation,
+        parse::{Parse, ParseStream},
+        Token,
+    };
 
     use crate::node::parse;
     // Dash between node-name
@@ -43,48 +54,126 @@ pub(crate) mod tokens {
     //     //
     /// Start part of doctype tag
     /// `<!`
-    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug)]
     pub struct DocStart {
         pub token_lt: Token![<],
         pub token_not: Token![!],
     }
 
+    impl Parse for DocStart {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            Ok(Self {
+                token_lt: input.parse()?,
+                token_not: input.parse()?,
+            })
+        }
+    }
+
+    impl ToTokens for DocStart {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            self.token_lt.to_tokens(tokens);
+            self.token_not.to_tokens(tokens);
+        }
+    }
+
     /// Start part of comment tag
     /// `<!--`
-    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug)]
     pub struct ComStart {
         pub token_lt: Token![<],
         pub token_not: Token![!],
-        #[parse(parse::parse_array_of2_tokens)]
-        #[to_tokens(parse::to_tokens_array)]
         pub token_minus: [Token![-]; 2],
+    }
+
+    impl Parse for ComStart {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            Ok(Self {
+                token_lt: input.parse()?,
+                token_not: input.parse()?,
+                token_minus: parse::parse_array_of2_tokens(input)?,
+            })
+        }
+    }
+
+    impl ToTokens for ComStart {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            self.token_lt.to_tokens(tokens);
+            self.token_not.to_tokens(tokens);
+            parse::to_tokens_array(tokens, self.token_minus);
+        }
     }
 
     /// End part of comment tag
     /// `-->`
-    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug)]
     pub struct ComEnd {
-        #[parse(parse::parse_array_of2_tokens)]
-        #[to_tokens(parse::to_tokens_array)]
         pub token_minus: [Token![-]; 2],
         pub token_gt: Token![>],
     }
 
+    impl Parse for ComEnd {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            Ok(Self {
+                token_minus: parse::parse_array_of2_tokens(input)?,
+                token_gt: input.parse()?,
+            })
+        }
+    }
+
+    impl ToTokens for ComEnd {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            parse::to_tokens_array(tokens, self.token_minus);
+            self.token_gt.to_tokens(tokens);
+        }
+    }
+
     /// End part of element's open tag
     /// `/>` or `>`
-    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug)]
     pub struct OpenTagEnd {
         pub token_solidus: Option<Token![/]>,
         pub token_gt: Token![>],
     }
 
+    impl Parse for OpenTagEnd {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            Ok(Self {
+                token_solidus: input.parse()?,
+                token_gt: input.parse()?,
+            })
+        }
+    }
+
+    impl ToTokens for OpenTagEnd {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            self.token_solidus.to_tokens(tokens);
+            self.token_gt.to_tokens(tokens);
+        }
+    }
+
     /// Start part of element's close tag.
     /// Its commonly used as separator
     /// `</`
-    #[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+    #[derive(Eq, PartialEq, Clone, Debug)]
     pub struct CloseTagStart {
         pub token_lt: Token![<],
         pub token_solidus: Token![/],
+    }
+
+    impl Parse for CloseTagStart {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            Ok(Self {
+                token_lt: input.parse()?,
+                token_solidus: input.parse()?,
+            })
+        }
+    }
+
+    impl ToTokens for CloseTagStart {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            self.token_lt.to_tokens(tokens);
+            self.token_solidus.to_tokens(tokens);
+        }
     }
 }
 
@@ -92,18 +181,50 @@ pub use tokens::*;
 
 /// Fragment open part
 /// `<>`
-#[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct FragmentOpen {
     pub token_lt: Token![<],
     pub token_gt: Token![>],
 }
 
+impl Parse for FragmentOpen {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            token_lt: input.parse()?,
+            token_gt: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for FragmentOpen {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_gt.to_tokens(tokens);
+    }
+}
+
 /// Fragment close part
 /// `</>`
-#[derive(Eq, PartialEq, Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct FragmentClose {
     pub start_tag: tokens::CloseTagStart,
     pub token_gt: Token![>],
+}
+
+impl Parse for FragmentClose {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            start_tag: input.parse()?,
+            token_gt: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for FragmentClose {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.start_tag.to_tokens(tokens);
+        self.token_gt.to_tokens(tokens);
+    }
 }
 
 impl FragmentClose {
@@ -133,12 +254,20 @@ impl FragmentClose {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, syn_derive::ToTokens)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TagGenerics {
     // None if no generics
     pub lt_token: Option<Token![<]>,
     pub args: syn::punctuated::Punctuated<syn::GenericArgument, Token![,]>,
     pub gt_token: Option<Token![>]>,
+}
+
+impl ToTokens for TagGenerics {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.lt_token.to_tokens(tokens);
+        self.args.to_tokens(tokens);
+        self.gt_token.to_tokens(tokens);
+    }
 }
 
 impl TagGenerics {
@@ -194,14 +323,23 @@ impl syn::parse::Parse for TagGenerics {
 
 /// Open tag for element, possibly self-closed.
 /// `<name attr=x, attr_flag>`
-#[derive(Clone, Debug, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct OpenTag {
     pub token_lt: Token![<],
     pub name: NodeName,
     pub generics: TagGenerics,
-    #[to_tokens(parse::to_tokens_array)]
     pub attributes: Vec<NodeAttribute>,
     pub end_tag: tokens::OpenTagEnd,
+}
+
+impl ToTokens for OpenTag {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.name.to_tokens(tokens);
+        self.generics.to_tokens(tokens);
+        parse::to_tokens_array(tokens, &self.attributes);
+        self.end_tag.to_tokens(tokens);
+    }
 }
 
 impl OpenTag {
@@ -212,12 +350,32 @@ impl OpenTag {
 }
 
 /// Open tag for element, `<name attr=x, attr_flag>`
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct CloseTag {
     pub start_tag: tokens::CloseTagStart,
     pub name: NodeName,
     pub generics: TagGenerics,
     pub token_gt: Token![>],
+}
+
+impl Parse for CloseTag {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            start_tag: input.parse()?,
+            name: input.parse()?,
+            generics: input.parse()?,
+            token_gt: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for CloseTag {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.start_tag.to_tokens(tokens);
+        self.name.to_tokens(tokens);
+        self.generics.to_tokens(tokens);
+        self.token_gt.to_tokens(tokens);
+    }
 }
 
 impl CloseTag {

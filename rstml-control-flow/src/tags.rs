@@ -82,7 +82,6 @@ impl<EndToken> ControlFlowTagEnd<EndToken> {
 ///
 /// As in rust can contain arbitrary amount of `<else if ... !>` constructs and
 /// one `<else !>` at the end close tag is expected.
-#[derive(syn_derive::ToTokens)]
 // #[derive_where(Clone, Debug; EndToken: Clone + std::fmt::Debug, C: Clone + std::fmt::Debug)]
 #[derive(Clone, Debug)]
 pub struct IfNode {
@@ -90,31 +89,70 @@ pub struct IfNode {
     pub token_if: Token![if],
     pub condition: Expr,
     pub open_tag_end: ControlFlowTagEnd,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub body: Vec<Node>,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub else_ifs: Vec<ElseIfNode>,
     pub else_child: Option<ElseNode>,
     pub close_tag: Option<atoms::CloseTag>,
 }
 
-#[derive(syn_derive::ToTokens, Clone, Debug)]
+impl ToTokens for IfNode {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_if.to_tokens(tokens);
+        self.condition.to_tokens(tokens);
+        self.open_tag_end.to_tokens(tokens);
+        tokens.append_all(&self.body);
+        tokens.append_all(&self.else_ifs);
+        self.else_child.to_tokens(tokens);
+        self.close_tag.to_tokens(tokens);
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct ElseIfNode {
     pub token_lt: Token![<],
     pub token_else_if: ElseIfToken,
     pub condition: Expr,
     pub open_tag_end: ControlFlowTagEnd,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub body: Vec<Node>,
     pub close_tag: Option<ElseIfCloseTag>,
 }
 
+impl ToTokens for ElseIfNode {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_else_if.to_tokens(tokens);
+        self.condition.to_tokens(tokens);
+        self.open_tag_end.to_tokens(tokens);
+        tokens.append_all(&self.body);
+        self.close_tag.to_tokens(tokens);
+    }
+}
+
 /// Close tag for element, `<name attr=x, attr_flag>`
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+#[derive(Clone, Debug)]
 pub struct ElseIfCloseTag {
     pub start_tag: CloseTagStart,
     pub token_else_if: ElseIfToken,
     pub token_gt: Token![>],
+}
+
+impl Parse for ElseIfCloseTag {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            start_tag: input.parse()?,
+            token_else_if: input.parse()?,
+            token_gt: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for ElseIfCloseTag {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.start_tag.to_tokens(tokens);
+        self.token_else_if.to_tokens(tokens);
+        self.token_gt.to_tokens(tokens);
+    }
 }
 
 impl ElseIfCloseTag {
@@ -131,24 +169,49 @@ impl ElseIfCloseTag {
     }
 }
 
-#[derive(syn_derive::ToTokens, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ElseNode {
     pub token_lt: Token![<],
     pub token_else: Token![else],
     // Use same type as in if
     pub open_tag_end: OpenTagEnd,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub body: Vec<Node>,
     pub close_tag: Option<atoms::CloseTag>,
 }
 
-#[derive(Clone, Debug, syn_derive::Parse, syn_derive::ToTokens)]
+impl ToTokens for ElseNode {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_else.to_tokens(tokens);
+        self.open_tag_end.to_tokens(tokens);
+        tokens.append_all(&self.body);
+        self.close_tag.to_tokens(tokens);
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct ElseIfToken {
     pub token_else: Token![else],
     pub token_if: Token![if],
 }
 
-#[derive(syn_derive::ToTokens, Clone, Debug)]
+impl Parse for ElseIfToken {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            token_else: input.parse()?,
+            token_if: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for ElseIfToken {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_else.to_tokens(tokens);
+        self.token_if.to_tokens(tokens);
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct ForNode {
     pub token_lt: Token![<],
     pub token_for: Token![for],
@@ -156,9 +219,21 @@ pub struct ForNode {
     pub token_in: Token![in],
     pub expr: Expr,
     pub open_tag_end: ControlFlowTagEnd,
-    #[to_tokens(TokenStreamExt::append_all)]
     pub body: Vec<Node>,
     pub close_tag: Option<atoms::CloseTag>,
+}
+
+impl ToTokens for ForNode {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.token_lt.to_tokens(tokens);
+        self.token_for.to_tokens(tokens);
+        self.pat.to_tokens(tokens);
+        self.token_in.to_tokens(tokens);
+        self.expr.to_tokens(tokens);
+        self.open_tag_end.to_tokens(tokens);
+        tokens.append_all(&self.body);
+        self.close_tag.to_tokens(tokens);
+    }
 }
 
 impl ParseRecoverable for ForNode {
@@ -416,6 +491,45 @@ impl CustomNode for Conditions {
     fn peek_element(input: syn::parse::ParseStream) -> bool {
         input.peek(Token![<])
             && (input.peek2(Token![else]) || input.peek2(Token![if]) || input.peek2(Token![for]))
+    }
+}
+
+#[cfg(test)]
+mod test_universal {
+    use quote::{quote, ToTokens};
+    use rstml::ParserConfig;
+
+    use super::Conditions;
+
+    #[test]
+    fn control_flow_tags_round_trip() {
+        let tokens = quote! {
+            <if foo > bar !>
+                <for value in values !>
+                    <div>{value}</div>
+                </for>
+                <else if foo < bar !>
+                    <less/>
+                </else if>
+                <else>
+                    <equal/>
+                </else>
+            </if>
+        };
+
+        #[cfg(not(feature = "extendable"))]
+        let actual = rstml::Parser::new(ParserConfig::new().custom_node::<Conditions>())
+            .parse_simple(tokens.clone())
+            .unwrap();
+        #[cfg(feature = "extendable")]
+        let actual = crate::ExtendableCustomNode::parse2_with_config::<(Conditions,)>(
+            ParserConfig::new(),
+            tokens.clone(),
+        )
+        .into_result()
+        .unwrap();
+
+        assert_eq!(actual[0].to_token_stream().to_string(), tokens.to_string());
     }
 }
 
