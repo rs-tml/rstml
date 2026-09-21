@@ -10,6 +10,18 @@ use syn::{
     ExprPath, LitStr, Token,
 };
 
+// Emit fields in the listed order; require every field to be listed.
+macro_rules! impl_to_tokens {
+    ($ty:ident, $($field:ident),+ $(,)?) => {
+        impl quote::ToTokens for $ty {
+            fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+                let Self { $($field),* } = self;
+                $(quote::ToTokens::to_tokens($field, tokens);)*
+            }
+        }
+    };
+}
+
 pub mod atoms;
 mod attribute;
 mod node_name;
@@ -195,11 +207,7 @@ impl Parse for NodeText {
     }
 }
 
-impl ToTokens for NodeText {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.value.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(NodeText, value);
 
 impl NodeText {
     /// Returns value of inner `LitStr`
@@ -221,13 +229,7 @@ pub struct NodeComment {
     pub token_end: tokens::ComEnd,
 }
 
-impl ToTokens for NodeComment {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.token_start.to_tokens(tokens);
-        self.value.to_tokens(tokens);
-        self.token_end.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(NodeComment, token_start, value, token_end);
 
 /// Doctype node.
 ///
@@ -246,14 +248,7 @@ pub struct NodeDoctype {
     pub token_end: Token![>],
 }
 
-impl ToTokens for NodeDoctype {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.token_start.to_tokens(tokens);
-        self.token_doctype.to_tokens(tokens);
-        self.value.to_tokens(tokens);
-        self.token_end.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(NodeDoctype, token_start, token_doctype, value, token_end);
 
 /// Fragement node.
 ///

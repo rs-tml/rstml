@@ -72,14 +72,7 @@ pub struct ElseIf {
     pub then_branch: Block,
 }
 
-impl ToTokens for ElseIf {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.else_token.to_tokens(tokens);
-        self.if_token.to_tokens(tokens);
-        self.condition.to_tokens(tokens);
-        self.then_branch.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(ElseIf, else_token, if_token, condition, then_branch);
 
 impl ParseRecoverable for ElseIf {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
@@ -100,12 +93,7 @@ pub struct Else {
     pub then_branch: Block,
 }
 
-impl ToTokens for Else {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.else_token.to_tokens(tokens);
-        self.then_branch.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(Else, else_token, then_branch);
 
 impl ParseRecoverable for Else {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
@@ -182,15 +170,7 @@ pub struct ForExpr {
     pub block: Block,
 }
 
-impl ToTokens for ForExpr {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.keyword.to_tokens(tokens);
-        self.pat.to_tokens(tokens);
-        self.token_in.to_tokens(tokens);
-        self.expr.to_tokens(tokens);
-        self.block.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(ForExpr, keyword, pat, token_in, expr, block);
 
 impl ParseRecoverable for ForExpr {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
@@ -222,14 +202,7 @@ pub struct Arm {
     pub comma: Option<Token![,]>,
 }
 
-impl ToTokens for Arm {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.pat.to_tokens(tokens);
-        self.fat_arrow_token.to_tokens(tokens);
-        self.body.to_tokens(tokens);
-        self.comma.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(Arm, pat, fat_arrow_token, body, comma);
 
 impl ParseRecoverable for Arm {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {

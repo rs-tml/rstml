@@ -7,6 +7,18 @@ use std::marker::PhantomData;
 use quote::ToTokens;
 use syn::parse::{Parse, ParseStream};
 
+// Emit fields in the listed order; require every field to be listed.
+macro_rules! impl_to_tokens {
+    ($ty:ident, $($field:ident),+ $(,)?) => {
+        impl quote::ToTokens for $ty {
+            fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+                let Self { $($field),* } = self;
+                $(quote::ToTokens::to_tokens($field, tokens);)*
+            }
+        }
+    };
+}
+
 pub mod escape;
 #[cfg(feature = "extendable")]
 pub mod extendable;

@@ -147,13 +147,7 @@ impl Parse for ElseIfCloseTag {
     }
 }
 
-impl ToTokens for ElseIfCloseTag {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.start_tag.to_tokens(tokens);
-        self.token_else_if.to_tokens(tokens);
-        self.token_gt.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(ElseIfCloseTag, start_tag, token_else_if, token_gt);
 
 impl ElseIfCloseTag {
     pub fn parse_with_start_tag(
@@ -204,12 +198,7 @@ impl Parse for ElseIfToken {
     }
 }
 
-impl ToTokens for ElseIfToken {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.token_else.to_tokens(tokens);
-        self.token_if.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(ElseIfToken, token_else, token_if);
 
 #[derive(Clone, Debug)]
 pub struct ForNode {
