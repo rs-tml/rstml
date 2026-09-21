@@ -69,12 +69,7 @@ pub(crate) mod tokens {
         }
     }
 
-    impl ToTokens for DocStart {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.token_lt.to_tokens(tokens);
-            self.token_not.to_tokens(tokens);
-        }
-    }
+    impl_to_tokens!(DocStart, token_lt, token_not);
 
     /// Start part of comment tag
     /// `<!--`
@@ -144,12 +139,7 @@ pub(crate) mod tokens {
         }
     }
 
-    impl ToTokens for OpenTagEnd {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.token_solidus.to_tokens(tokens);
-            self.token_gt.to_tokens(tokens);
-        }
-    }
+    impl_to_tokens!(OpenTagEnd, token_solidus, token_gt);
 
     /// Start part of element's close tag.
     /// Its commonly used as separator
@@ -169,12 +159,7 @@ pub(crate) mod tokens {
         }
     }
 
-    impl ToTokens for CloseTagStart {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.token_lt.to_tokens(tokens);
-            self.token_solidus.to_tokens(tokens);
-        }
-    }
+    impl_to_tokens!(CloseTagStart, token_lt, token_solidus);
 }
 
 pub use tokens::*;
@@ -196,12 +181,7 @@ impl Parse for FragmentOpen {
     }
 }
 
-impl ToTokens for FragmentOpen {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.token_lt.to_tokens(tokens);
-        self.token_gt.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(FragmentOpen, token_lt, token_gt);
 
 /// Fragment close part
 /// `</>`
@@ -220,12 +200,7 @@ impl Parse for FragmentClose {
     }
 }
 
-impl ToTokens for FragmentClose {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.start_tag.to_tokens(tokens);
-        self.token_gt.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(FragmentClose, start_tag, token_gt);
 
 impl FragmentClose {
     ///
@@ -262,13 +237,7 @@ pub struct TagGenerics {
     pub gt_token: Option<Token![>]>,
 }
 
-impl ToTokens for TagGenerics {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.lt_token.to_tokens(tokens);
-        self.args.to_tokens(tokens);
-        self.gt_token.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(TagGenerics, lt_token, args, gt_token);
 
 impl TagGenerics {
     pub fn type_params(&self) -> impl Iterator<Item = &syn::Type> {
@@ -369,14 +338,7 @@ impl Parse for CloseTag {
     }
 }
 
-impl ToTokens for CloseTag {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.start_tag.to_tokens(tokens);
-        self.name.to_tokens(tokens);
-        self.generics.to_tokens(tokens);
-        self.token_gt.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(CloseTag, start_tag, name, generics, token_gt);
 
 impl CloseTag {
     pub fn parse_with_start_tag(

@@ -327,12 +327,7 @@ impl ToTokens for FnBinding {
     }
 }
 
-impl ToTokens for AttributeValueExpr {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.token_eq.to_tokens(tokens);
-        self.value.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(AttributeValueExpr, token_eq, value);
 
 impl ToTokens for KVAttributeValue {
     fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -353,12 +348,7 @@ impl ToTokens for KeyedAttributeValue {
     }
 }
 
-impl ToTokens for KeyedAttribute {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.key.to_tokens(tokens);
-        self.possible_value.to_tokens(tokens);
-    }
-}
+impl_to_tokens!(KeyedAttribute, key, possible_value);
 
 impl ToTokens for NodeAttribute {
     fn to_tokens(&self, tokens: &mut TokenStream) {
