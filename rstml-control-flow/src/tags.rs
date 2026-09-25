@@ -219,9 +219,10 @@ impl ParseRecoverable for ForNode {
         let (expr, open_tag_end): (_, ControlFlowTagEnd) = parser.parse_simple_until(input)?;
 
         let (body, close_tag) = if open_tag_end.is_start() {
-            // If node is not raw use any closing tag as separator, to early report about
-            // invalid closing tags.
-            // Also parse only </ part to recover parser as soon as user types </
+            // If node is not raw use any closing tag as separator, to early
+            // report about invalid closing tags.
+            // Also parse only </ part to recover parser as soon as user types
+            // </
             let (children, close_tag) =
                 parser.parse_tokens_until_call::<Node, _, _>(input, CloseTagStart::parse);
 
@@ -253,9 +254,10 @@ impl ParseRecoverable for ElseIfNode {
         let (condition, open_tag_end): (_, ControlFlowTagEnd) = parser.parse_simple_until(input)?;
 
         let (body, close_tag) = if open_tag_end.is_start() {
-            // If node is not raw use any closing tag as separator, to early report about
-            // invalid closing tags.
-            // Also parse only </ part to recover parser as soon as user types </
+            // If node is not raw use any closing tag as separator, to early
+            // report about invalid closing tags.
+            // Also parse only </ part to recover parser as soon as user types
+            // </
             let (children, close_tag) =
                 parser.parse_tokens_until_call::<Node, _, _>(input, CloseTagStart::parse);
 

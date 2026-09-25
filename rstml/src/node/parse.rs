@@ -201,9 +201,10 @@ impl<C: CustomNode> NodeElement<C> {
             };
             (children, closed_tag)
         } else {
-            // If node is not raw use any closing tag as separator, to early report about
-            // invalid closing tags.
-            // Also parse only </ part to recover parser as soon as user types </
+            // If node is not raw use any closing tag as separator, to early
+            // report about invalid closing tags.
+            // Also parse only </ part to recover parser as soon as user types
+            // </
             let (children, close_tag) =
                 parser.parse_tokens_until_call::<Node<C>, _, _>(input, CloseTagStart::parse);
 

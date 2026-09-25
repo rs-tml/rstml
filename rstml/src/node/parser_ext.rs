@@ -28,9 +28,9 @@ impl RecoverableContext {
     pub fn parse_simple_until<T: Parse, E: Parse>(&mut self, input: ParseStream) -> Option<(T, E)> {
         let mut tokens = TokenStream::new();
         let res = loop {
-            // Use fork, because we can't limit separator to be only Peekable for custom
-            // tokens but we also need to parse complex expressions like
-            // "foo=x/y" or "/>"
+            // Use fork, because we can't limit separator to be only Peekable
+            // for custom tokens but we also need to parse complex
+            // expressions like "foo=x/y" or "/>"
             let fork = input.fork();
             if let Ok(end) = fork.parse() {
                 input.advance_to(&fork);
@@ -184,9 +184,9 @@ impl RecoverableContext {
     {
         let mut tokens = TokenStream::new();
         let res = loop {
-            // Use fork, because we can't limit separator to be only Peekable for custom
-            // tokens but we also need to parse complex expressions like
-            // "foo=x/y" or "/>"
+            // Use fork, because we can't limit separator to be only Peekable
+            // for custom tokens but we also need to parse complex
+            // expressions like "foo=x/y" or "/>"
             let fork = input.fork();
             if let Ok(end) = ending(&fork) {
                 input.advance_to(&fork);
