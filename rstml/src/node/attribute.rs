@@ -267,8 +267,9 @@ impl ParseRecoverable for KeyedAttribute {
                     let res = fork
                         .parse::<Expr>()
                         .map_err(|e| {
-                            // if we stuck on end of input, span that is created will be call_site,
-                            // so we need to correct it, in order to
+                            // if we stuck on end of input, span that is created
+                            // will be call_site, so
+                            // we need to correct it, in order to
                             // make it more IDE friendly.
                             if fork.is_empty() {
                                 KeyedAttribute::correct_expr_error_span(e, input)

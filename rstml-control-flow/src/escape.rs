@@ -47,7 +47,8 @@ impl ToTokens for Block {
 impl ParseRecoverable for Block {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         // we use this closure, because `braced!`
-        // has private api and force it's usage inside methods that return Result
+        // has private api and force it's usage inside methods that return
+        // Result
         let inner_parser = |parser: &mut RecoverableContext, input: ParseStream| {
             let content;
             let brace_token = braced!(content in input);
@@ -242,7 +243,8 @@ impl ToTokens for MatchExpr {
 impl ParseRecoverable for MatchExpr {
     fn parse_recoverable(parser: &mut RecoverableContext, input: ParseStream) -> Option<Self> {
         // we use this closure, because `braced!`
-        // has private api and force it's usage inside methods that return Result
+        // has private api and force it's usage inside methods that return
+        // Result
         let inner_parser = |parser: &mut RecoverableContext, input: ParseStream| {
             let Some(keyword) = parser.parse_simple(input) else {
                 return Ok(None);
