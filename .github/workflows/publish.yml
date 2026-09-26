@@ -44,8 +44,8 @@ jobs:
 
       - name: Install release tools
         run: |
-          cargo binstall cargo-edit --version 0.13.0 --no-confirm --disable-strategies compile
-          cargo install git-cliff --version 2.14.0 --locked
+          cargo binstall cargo-edit --version 0.13.13 --no-confirm --disable-strategies compile
+          cargo binstall git-cliff --version 2.14.2 --no-confirm --disable-strategies compile
 
       - name: Prepare release versions
         id: release
