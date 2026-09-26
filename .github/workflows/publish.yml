@@ -1,0 +1,109 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Library version bump (test publishes an isolated prerelease)
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+          - test
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install release tools
+        run: |
+          cargo install cargo-edit --version 0.13.0 --locked --no-default-features --features set-version
+          cargo install git-cliff --version 2.14.0 --locked
+
+      - name: Prepare release versions
+        id: release
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          if [ "$BUMP" = test ]; then
+            # Bumping to a stable patch first would make its prerelease a downgrade.
+            cargo set-version --package rstml --bump alpha
+          else
+            cargo set-version --package rstml --bump "$BUMP"
+          fi
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -c '
+          import json, sys
+          packages = json.load(sys.stdin)["packages"]
+          print(next(p["version"] for p in packages if p["name"] == "rstml"))
+          ')
+          if [ "$BUMP" = test ]; then
+            version="${version%%-*}-test.$(python3 -c 'import uuid; print(uuid.uuid4())')"
+            cargo set-version --package rstml "$version"
+          fi
+          cargo set-version --package rstml-control-flow "$version"
+          cargo set-version --package rstml-to-string-macro --bump minor
+          tag="v$version"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "Tag $tag already exists." >&2
+            exit 1
+          fi
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Test workspace
+        run: |
+          cargo test --workspace
+          cargo test -p rstml --features rawtext-stable-hack-module
+          cargo test -p rstml-control-flow --features extendable
+
+      - name: Generate release changelog
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: ./generate_changelog.sh --tag "$RELEASE_TAG"
+
+      - name: Commit release versions
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Cargo.toml rstml/Cargo.toml rstml-control-flow/Cargo.toml examples/html-to-string-macro/Cargo.toml CHANGELOG.md
+          git commit --message "chore: release $RELEASE_TAG"
+
+      - name: Push release commit
+        if: inputs.bump != 'test'
+        run: git push origin HEAD:refs/heads/main
+
+      - name: Publish crates
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo publish --package rstml --registry crates-io
+          cargo publish --package rstml-control-flow --registry crates-io
+
+      - name: Push release tag
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git tag --annotate "$RELEASE_TAG" --message "Release $RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"

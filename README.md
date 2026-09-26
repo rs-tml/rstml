@@ -1,6 +1,7 @@
 # rstml
 
 [![crates.io page](https://img.shields.io/crates/v/rstml.svg)](https://crates.io/crates/rstml)
+[![future version](https://raw.githubusercontent.com/rs-tml/rstml/future-version-badge/future-version.svg)](https://github.com/rs-tml/rstml/actions/workflows/future-version.yml)
 [![docs.rs page](https://docs.rs/rstml/badge.svg)](https://docs.rs/rstml/)
 [![codecov](https://codecov.io/gh/rs-tml/rstml/branch/main/graph/badge.svg?token=2LMJ8YEV92)](https://codecov.io/gh/rs-tml/rs-tml)
 ![build](https://github.com/rs-tml/rstml/workflows/ci/badge.svg)

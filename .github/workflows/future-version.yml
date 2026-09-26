@@ -1,0 +1,47 @@
+name: future version
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  # GITHUB_TOKEN pushes from the publishing workflow do not trigger push workflows.
+  workflow_run:
+    workflows:
+      - publish
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+concurrency:
+  group: future-version-badge
+  cancel-in-progress: true
+
+jobs:
+  badge:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install SemVer checker
+        run: cargo install cargo-semver-checks --version 0.50.0 --locked
+
+      - name: Generate future version badge
+        run: python3 .github/scripts/future-version.py "$RUNNER_TEMP/future-version-badge/future-version.svg"
+
+      - name: Publish badge
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: future-version-badge
+          publish_dir: ${{ runner.temp }}/future-version-badge
+          keep_files: true
+          commit_message: 'docs: update future version badge'
