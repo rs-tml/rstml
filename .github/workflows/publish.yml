@@ -25,14 +25,30 @@ jobs:
   publish:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Restrict this environment to main and require trusted reviewers. Store
+    # RELEASE_APP_PRIVATE_KEY and CARGO_REGISTRY_TOKEN only as environment secrets.
+    environment: release
     permissions:
       contents: write
 
     steps:
+      # Install this App on the repository with Contents: write and add it to
+      # every applicable main ruleset's bypass list with "Always allow".
+      # RELEASE_APP_ID identifies that pre-existing App; no App is created here.
+      - name: Mint release installation token
+        if: inputs.bump != 'test'
+        id: release-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ inputs.bump == 'test' && github.token || steps.release-token.outputs.token }}
 
       - uses: dtolnay/rust-toolchain@stable
 
