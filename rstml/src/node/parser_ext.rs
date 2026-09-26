@@ -1,5 +1,5 @@
 use proc_macro2::{TokenStream, TokenTree};
-use proc_macro2_diagnostics2::{Diagnostic, Level};
+use proc_macro2_diagnostics::{Diagnostic, Level};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     spanned::Spanned,

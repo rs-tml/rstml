@@ -8,7 +8,7 @@
 //! `</close_tag>`
 
 use proc_macro2::{Ident, TokenStream};
-use proc_macro2_diagnostics2::{Diagnostic, Level};
+use proc_macro2_diagnostics::{Diagnostic, Level};
 use quote::ToTokens;
 use syn::{ext::IdentExt, Token};
 

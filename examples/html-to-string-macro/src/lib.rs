@@ -116,9 +116,9 @@ where
         {
             let _ = write!(self.output.static_format, "/</{}>", element.open_tag.name);
             if !element.children.is_empty() {
-                let warning = proc_macro2_diagnostics2::Diagnostic::spanned(
+                let warning = proc_macro2_diagnostics::Diagnostic::spanned(
                     element.open_tag.name.span(),
-                    proc_macro2_diagnostics2::Level::Warning,
+                    proc_macro2_diagnostics::Level::Warning,
                     "Element is processed as empty, and cannot have any child",
                 );
                 self.output.diagnostics.push(warning.emit_as_expr_tokens());
@@ -229,7 +229,7 @@ fn html_inner(tokens: TokenStream, ide_helper: bool) -> TokenStream {
     };
     let errors = errors
         .into_iter()
-        .map(proc_macro2_diagnostics2::Diagnostic::emit_as_expr_tokens)
+        .map(proc_macro2_diagnostics::Diagnostic::emit_as_expr_tokens)
         .chain(diagnostics);
     quote! {
         {

@@ -28,7 +28,7 @@ syn = { version = "3.0.0", features = [
     "extra-traits",
 ] }
 thiserror = "2.0.11"
-proc-macro2-diagnostics2 = { version = "0.11", default-features = false }
+proc-macro2-diagnostics = { version = "0.11", default-features = false, features = ["nightly"] }
 derive-where = "1.2.7"
 # dev-dependencies
 criterion = "0.7.0"
