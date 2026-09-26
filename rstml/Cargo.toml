@@ -17,7 +17,7 @@ proc-macro2.workspace = true
 quote.workspace = true
 syn.workspace = true
 thiserror.workspace = true
-proc-macro2-diagnostics2.workspace = true
+proc-macro2-diagnostics.workspace = true
 derive-where.workspace = true
 
 [dev-dependencies]
@@ -32,14 +32,15 @@ path = "benches/bench.rs"
 
 
 [features]
-default = ["colors"]
+default = []
 # Hack that parse input two times, using `proc-macro2::fallback` to recover spaces, and persist original spans.
 # It has no penalty in nightly, but in stable it parses input two times.
 # In order to use this feature, one should also set `ParserConfig::macro_call_pattern`.
 rawtext-stable-hack = ["rawtext-stable-hack-module"]
 # Export inters of rawtext_stable_hack. It is usefull if you need support of `UnquotedText` on stable but your macro is called from other one.
 rawtext-stable-hack-module = []
-colors = ["proc-macro2-diagnostics2/colors"]
+# Retained for compatibility; upstream diagnostics no longer supports color configuration.
+colors = []
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(rstml_signal_nightly)'] }
