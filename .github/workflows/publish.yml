@@ -36,9 +36,15 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Install binary package installer
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-binstall
+          fallback: none
+
       - name: Install release tools
         run: |
-          cargo install cargo-edit --version 0.13.0 --locked --no-default-features --features set-version
+          cargo binstall cargo-edit --version 0.13.0 --no-confirm --disable-strategies compile
           cargo install git-cliff --version 2.14.0 --locked
 
       - name: Prepare release versions
@@ -81,6 +87,25 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: ./generate_changelog.sh --tag "$RELEASE_TAG"
 
+      - name: Extract release notes
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          version = os.environ["RELEASE_TAG"].removeprefix("v")
+          sections = re.split(r"(?m)^## ", Path("CHANGELOG.md").read_text(encoding="utf-8"))
+          section = next((s for s in sections[1:] if s.startswith(f"[{version}] - ")), None)
+          if section is None:
+              raise SystemExit(f"No changelog section found for {version}")
+          Path(os.environ["RUNNER_TEMP"], "release-notes.md").write_text(
+              "## " + section.strip() + "\n", encoding="utf-8"
+          )
+          PY
+
       - name: Commit release versions
         env:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
@@ -107,3 +132,17 @@ jobs:
         run: |
           git tag --annotate "$RELEASE_TAG" --message "Release $RELEASE_TAG"
           git push origin "refs/tags/$RELEASE_TAG"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          args=()
+          if [ "$BUMP" = test ]; then
+            args+=(--prerelease --latest=false)
+          fi
+          gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" "${args[@]}"
