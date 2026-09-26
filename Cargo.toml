@@ -24,8 +24,8 @@ proc-macro2 = { version = "1.0.93", features = ["span-locations"] }
 proc-macro2-diagnostics = { version = "0.11", default-features = false, features = ["nightly"] }
 quote = "1.0.38"
 # Our packages
-rstml = { path = "rstml", version = "0.13.0" }
-rstml-control-flow = { path = "rstml-control-flow", version = "0.2.0" }
+rstml = { path = "rstml", version = "0.13.1" }
+rstml-control-flow = { path = "rstml-control-flow", version = "0.13.1" }
 syn = {
   version = "3.0.0",
   features = [

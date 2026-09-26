@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.1] - 2026-09-26
+
+### Chore
+
+- Apply current rustfmt
+- Add workflow for release
+- Use bin version instead of building tools
+- Replace `proc-macro2-diagnostics2` with upstream `proc-macro2-diagnostics` 0.11
+- Bump versions to remove syn v2 deps/build-deps
+- Bump cargo-edit, use bin for git-clif
+- Add app for pushing commit to main from workflow
+
+### Fix
+
+- Remove syn_derive to address RUSTSEC-2026-0173
+
+### Refactor
+
+- Reduce ToTokens boilerplate with private macros
+- Reduce Parse boilerplate with private macros
+
 ## [0.13.0] - 2026-07-22
 
 ### Chore
@@ -9,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - Update deps versions.
 - Add fix for merge tests.
 - Apply clippy fixups.
+- Apply fmt
 
 ### Features
 
@@ -20,6 +42,7 @@ All notable changes to this project will be documented in this file.
 - Update deps + fix new nightly line number format.
 - Fix typo
 - Rewrite parser for Generics in tag.
+- Bump extra package deps
 
 ### Other
 
