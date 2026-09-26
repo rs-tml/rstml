@@ -31,8 +31,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install SemVer checker
-        run: cargo install cargo-semver-checks --version 0.50.0 --locked
+      - name: Install prebuilt SemVer checker
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks@0.50.0
+          fallback: none
 
       - name: Generate future version badge
         run: python3 .github/scripts/future-version.py "$RUNNER_TEMP/future-version-badge/future-version.svg"
