@@ -1,36 +1,39 @@
-[workspace.package]
-description = "Rust templating for XML-based formats (HTML, SVG, MathML) implemented on top of proc-macro::TokenStreams"
-authors = ["vldm <me@vldm.cc>", "stoically <stoically@protonmail.com>"]
-keywords = ["syn", "jsx", "rsx", "html", "macro"]
-edition = "2021"
-repository = "https://github.com/rs-tml/rstml"
-license = "MIT"
-license-file = "LICENSE"
-
-include = ["/src", "build.rs", "LICENSE"]
-readme = "README.md"
-
 [workspace]
 resolver = "2"
 members = ["examples/html-to-string-macro", "rstml-control-flow"]
 
+[workspace.package]
+authors = ["vldm <me@vldm.cc>", "stoically <stoically@protonmail.com>"]
+edition = "2021"
+description = "Rust templating for XML-based formats (HTML, SVG, MathML) implemented on top of proc-macro::TokenStreams"
+repository = "https://github.com/rs-tml/rstml"
+license = "MIT"
+license-file = "LICENSE"
+keywords = ["html", "jsx", "macro", "rsx", "syn"]
+
+readme = "README.md"
+include = ["/src", "LICENSE", "build.rs"]
+
 [workspace.dependencies]
-# Our packages
-rstml = { version = "0.13.0", path = "rstml" }
-rstml-control-flow = { version = "0.2.0", path = "rstml-control-flow" }
+# dev-dependencies
+criterion = "0.8.0"
+derive-where = "1.7.0"
+eyre = "0.6.12"
 # external dependencies
 proc-macro2 = { version = "1.0.93", features = ["span-locations"] }
+proc-macro2-diagnostics = { version = "0.11", default-features = false, features = ["nightly"] }
 quote = "1.0.38"
-syn = { version = "3.0.0", features = [
-    "visit-mut",
+# Our packages
+rstml = { path = "rstml", version = "0.13.0" }
+rstml-control-flow = { path = "rstml-control-flow", version = "0.2.0" }
+syn = {
+  version = "3.0.0",
+  features = [
+    "extra-traits",
     "full",
     "parsing",
-    "extra-traits",
-] }
+    "visit-mut",
+  ]
+}
 thiserror = "2.0.11"
-proc-macro2-diagnostics = { version = "0.11", default-features = false, features = ["nightly"] }
-derive-where = "1.2.7"
-# dev-dependencies
-criterion = "0.7.0"
-eyre = "0.6.12"
 trybuild = "1.0"
