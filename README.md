@@ -62,6 +62,7 @@ implementation and therefore can be used to pretty print html node.
 - [leptos](https://github.com/leptos-rs/leptos) - framework for web application. `Rstml` is used inside `view`/`template` macros and for `hot-reload` feature.
 - [leptosfmt](https://github.com/bram209/leptosfmt) - a wrapper of rustfmt tool for `leptos` which can format html/xml code inside `view` macros.
 - [sauron](https://github.com/ivanceras/sauron) - a versatile web framework and library for building client-side and/or server-side web application.
+- [rstml-ssr](https://github.com/ethanthoma/rstml-ssr) - server-side HTML templates with automatic escaping, reusable fragments, and bounded rendering.
   
 
 ## Features
